@@ -117,6 +117,20 @@ describe("TrustGroupManager", function () {
 
       describe("Split EQUAL", function () {
 
+        it("Should properly handle debs for one expenses splitted with one payer different than registrator", async function () {
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const expenseRegistator = creator;
+          const firstMember = otherMembers[0];
+          await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 8, [firstMember], 0, []);
+
+          expect(await groupManager.connect(firstMember)
+            .groupDebtTo(groupId, expenseRegistator)).to.be.eq(8);
+          expect(await groupManager.connect(expenseRegistator)
+            .getMyBalanceInGroup(groupId)).to.be.eq(8);
+          expect(await groupManager.connect(firstMember)
+            .getMyBalanceInGroup(groupId)).to.be.eq(-8);
+        });
+
         it("Should properly handle debs for one expenses splitted with two payers different than registrator", async function () {
           const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
           const expenseRegistator = creator;
@@ -601,4 +615,488 @@ describe("TrustGroupManager", function () {
       });
     })
   });
+
+  describe("Debt semplification", function () {
+    async function createGroupOf4() {
+      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
+      const taskGroupManager = await GroupManagerFactory.deploy();
+      const [Dave, Bob, Charlie, Alice] = await hre.ethers.getSigners();
+
+      // Simulazione: ottieni il groupId senza scrivere
+      const groupId = await taskGroupManager.connect(Dave).createGroup.staticCall(
+        "Spesa casa pisa",
+        [Bob, Charlie, Alice]
+      );
+
+      // Esegui davvero la transazione
+      await taskGroupManager.connect(Dave).createGroup(
+        "Spesa casa pisa",
+        [Bob, Charlie, Alice]
+      );
+      return {
+        groupManager: taskGroupManager, groupId: groupId,
+        Dave: Dave, Bob: Bob, Charlie: Charlie, Alice: Alice
+      };
+    }
+
+    it("Should not change anything in case of single edge", async function () {
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+
+      ///recreate the situation of the assignment
+      await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
+
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(4);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-4);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+
+      await groupManager.connect(Dave).simplifyDebt(groupId);
+
+      //same balance
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(4);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-4);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+
+      //different edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(4);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+    });
+
+    it("Should not change anything in the case of multiple incoming edges to the same node", async function () {
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+
+      ///recreate the situation of the assignment
+      await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
+      await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Alice], 0, []);
+
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-4);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(8);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-4);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+
+      await groupManager.connect(Dave).simplifyDebt(groupId);
+
+      //same balance
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-4);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(8);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-4);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+
+      //different edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(4);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(4);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+    });
+
+    it("Should not change anything in the case of multiple outgoing edges of the same node", async function () {
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+
+      ///recreate the situation of the assignment
+      await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
+      await groupManager.connect(Alice).registerExpenses(groupId, "Beer", 5, [Bob], 0, []);
+      await groupManager.connect(Charlie).registerExpenses(groupId, "Beer", 2, [Bob], 0, []);
+
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(5);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(4);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-11);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(2);
+
+      await groupManager.connect(Dave).simplifyDebt(groupId);
+
+      //same balance
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(5);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(4);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-11);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(2);
+
+      //different edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(5);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(4);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(2);
+    });
+
+    it("Should simplify two outgoing edges into one when the intermediate node owes the same amount to third node", async function () {
+      //A -> 10 -> C
+      //A -> 10 -> B
+      //B -> 10 -> C
+      //OUT
+      //A -> 20 -> C
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+
+      ///recreate the situation of the assignment
+      await groupManager.connect(Bob).registerExpenses(groupId, "Beer", 10, [Alice], 0, []);
+      await groupManager.connect(Charlie).registerExpenses(groupId, "Beer", 10, [Alice], 0, []);
+      await groupManager.connect(Charlie).registerExpenses(groupId, "Beer", 10, [Bob], 0, []);
+
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-20);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(20);
+
+      await groupManager.connect(Dave).simplifyDebt(groupId);
+
+      //same balance
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-20);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(20);
+
+      //different edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(20);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+    });
+
+    it("Should simplify a cicle of three node in a single edge if one node of the cicle has a balance of 0", async function () {
+      //A -> 5 -> B
+      //B -> 5 -> C
+      //C -> 10 -> A
+      //OUT
+      //C -> 5 -> A
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+
+      ///recreate the situation of the assignment
+      await groupManager.connect(Bob).registerExpenses(groupId, "Beer", 5, [Alice], 0, []);
+      await groupManager.connect(Charlie).registerExpenses(groupId, "Beer", 5, [Bob], 0, []);
+      await groupManager.connect(Alice).registerExpenses(groupId, "Beer", 10, [Charlie], 0, []);
+
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(5);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-5);
+
+      await groupManager.connect(Dave).simplifyDebt(groupId);
+
+      //same balance
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(5);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-5);
+
+      //different edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(5);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+    });
+
+    it("Should simplify a cicle if all node in the cycle has a balance of 0", async function () {
+      //A -> 5 -> B
+      //B -> 5 -> C
+      //C -> 5 -> D
+      //D -> 5 -> A
+      //OUT
+      //
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+
+      ///recreate the situation of the assignment
+      await groupManager.connect(Bob).registerExpenses(groupId, "Beer", 5, [Alice], 0, []);
+      await groupManager.connect(Charlie).registerExpenses(groupId, "Beer", 5, [Bob], 0, []);
+      await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 5, [Charlie], 0, []);
+      await groupManager.connect(Alice).registerExpenses(groupId, "Beer", 5, [Dave], 0, []);
+
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+
+      //initial edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(5);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(5);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(5);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(5);
+
+      await groupManager.connect(Dave).simplifyDebt(groupId);
+
+      //same balance
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(0);
+
+      //different edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+    });
+
+    it("Should simplify debts as described in the example of PDF", async function () {
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+
+      ///recreate the situation of the assignment
+      await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
+      await groupManager.connect(Alice).registerExpenses(groupId, "Beer", 12, [Dave], 0, []);
+      await groupManager.connect(Alice).registerExpenses(groupId, "Beer", 5, [Charlie], 0, []);
+      await groupManager.connect(Charlie).registerExpenses(groupId, "Beer", 7, [Bob], 0, []);
+      await groupManager.connect(Bob).registerExpenses(groupId, "Beer", 10, [Alice], 0, []);
+
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(7);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-8);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-1);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(2);
+
+      await groupManager.connect(Dave).simplifyDebt(groupId);
+
+      //same balance
+      expect(await groupManager.connect(Alice)
+        .getMyBalanceInGroup(groupId)).to.be.eq(7);
+      expect(await groupManager.connect(Dave)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-8);
+      expect(await groupManager.connect(Bob)
+        .getMyBalanceInGroup(groupId)).to.be.eq(-1);
+      expect(await groupManager.connect(Charlie)
+        .getMyBalanceInGroup(groupId)).to.be.eq(2);
+
+      //different edges
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(0);
+      expect(await groupManager.connect(Alice)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Alice)).to.be.eq(7);
+      expect(await groupManager.connect(Dave)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(1);
+
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Charlie)
+        .groupDebtTo(groupId, Bob)).to.be.eq(0);
+
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Alice)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Dave)).to.be.eq(0);
+      expect(await groupManager.connect(Bob)
+        .groupDebtTo(groupId, Charlie)).to.be.eq(1);
+    });
+
+
+  })
 });
