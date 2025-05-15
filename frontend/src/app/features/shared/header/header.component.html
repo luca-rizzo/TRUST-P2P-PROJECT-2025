@@ -1,0 +1,14 @@
+<header class="app-header">
+  <div class="app-header__container">
+    <!-- Logo a sinistra -->
+    <div class="app-header__logo">
+      <img src="assets/logo.png" alt="Logo" />
+      <span>TRUST</span>
+    </div>
+
+    <!-- Indirizzo a destra -->
+    <div class="app-header__address">
+      {{address$ | async}}
+    </div>
+  </div>
+</header>

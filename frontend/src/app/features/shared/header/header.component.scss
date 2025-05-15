@@ -1,0 +1,42 @@
+.app-header {
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  color: #111827;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  &__container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    img {
+      height: 2rem;
+      width: 2rem;
+    }
+
+    span {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+  }
+
+  &__address {
+    font-size: 0.9rem;
+    font-family: monospace;
+    background-color: #f1f5f9;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.5rem;
+    color: #1f2937;
+  }
+}

@@ -1,18 +1,17 @@
 import {
-  time,
-  loadFixture,
+  loadFixture
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import hre from "hardhat";
 
 describe("TrustGroupManager", function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshot in every test.
+
+  
   async function deployManager() {
+    const Token = await hre.ethers.getContractFactory("TrustToken");
+    const token = await Token.deploy();
     const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-    const taskGroupManager = await GroupManagerFactory.deploy();
+    const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
 
     return { groupManager: taskGroupManager };
   }
@@ -23,8 +22,10 @@ describe("TrustGroupManager", function () {
 
   describe("Group creation", function () {
     async function createGroup() {
+      const Token = await hre.ethers.getContractFactory("TrustToken");
+      const token = await Token.deploy();
       const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy();
+      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
       const [creator, member2, member3] = await hre.ethers.getSigners();
 
       // Simulazione: ottieni il groupId senza scrivere
@@ -93,10 +94,12 @@ describe("TrustGroupManager", function () {
   });
 
 
-  describe("Expenses handling", function () {
+  describe("Expenses creation handling", function () {
     async function createGroup() {
+      const Token = await hre.ethers.getContractFactory("TrustToken");
+      const token = await Token.deploy();
       const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy();
+      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
       const [creator, member2, member3] = await hre.ethers.getSigners();
 
       // Simulazione: ottieni il groupId senza scrivere
@@ -618,8 +621,10 @@ describe("TrustGroupManager", function () {
 
   describe("Debt semplification", function () {
     async function createGroupOf4() {
+      const Token = await hre.ethers.getContractFactory("TrustToken");
+      const token = await Token.deploy();
       const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy();
+      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
       const [Dave, Bob, Charlie, Alice] = await hre.ethers.getSigners();
 
       // Simulazione: ottieni il groupId senza scrivere
@@ -1098,5 +1103,232 @@ describe("TrustGroupManager", function () {
     });
 
 
-  })
+  });
+
+  describe("Expenses settling", function () {
+    async function createGroup() {
+      const Token = await hre.ethers.getContractFactory("TrustToken");
+      const token = await Token.deploy();
+      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
+      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
+      const [creator, member2, member3] = await hre.ethers.getSigners();
+
+      // Simulazione: ottieni il groupId senza scrivere
+      const groupId = await taskGroupManager.connect(creator).createGroup.staticCall(
+        "Spesa casa pisa",
+        [member2.address, member3.address]
+      );
+
+      // Esegui davvero la transazione
+      await taskGroupManager.connect(creator).createGroup(
+        "Spesa casa pisa",
+        [member2.address, member3.address]
+      );
+      return { groupManager: taskGroupManager, token: token, groupId: groupId, creator: creator, otherMembers: [member2, member3] };
+    }
+
+    describe("Correct settlement of an expense", function () {
+
+      it("Should correctly settle a part of a debt when amount is less than debt", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        await token.connect(Alice).approve(groupManager, 10);
+        await token.connect(Alice).buyToken({ value: hre.ethers.parseEther("10") });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await groupManager.connect(Alice)
+          .settleDebt(groupId, 2, Bob);
+
+        expect(await groupManager.connect(Alice)
+          .groupDebtTo(groupId, Bob)).to.be.eq(2);
+        expect(await groupManager.connect(Alice)
+          .getMyBalanceInGroup(groupId)).to.be.eq(-2);
+      });
+
+      it("Should correctly delete a debt when amount is equal to debt", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        await token.connect(Alice).approve(groupManager, 10);
+        await token.connect(Alice).buyToken({ value: hre.ethers.parseEther("10") });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await groupManager.connect(Alice)
+          .settleDebt(groupId, 4, Bob);
+
+        expect(await groupManager.connect(Alice)
+          .groupDebtTo(groupId, Bob)).to.be.eq(0);
+        expect(await groupManager.connect(Alice)
+          .getMyBalanceInGroup(groupId)).to.be.eq(0);
+      });
+
+    });
+
+    describe("Errors", function () {
+
+      it("Should not be able to settle a debt if amount is grater than debt", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await expect(groupManager.connect(Alice)
+          .settleDebt(groupId, 5, Bob)).to.be.revertedWith(
+            "Debs are smaller than amount!"
+          );
+      });
+
+      it("Should not be able to settle a debt if sender has not enough token", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+        await token.connect(Alice).approve(groupManager, 4);
+        await token.connect(Alice).buyToken({ value: hre.ethers.parseUnits("3", "wei") });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+
+        await expect(groupManager.connect(Alice)
+          .settleDebt(groupId, 4, Bob)).to.be.revertedWith(
+            "Insufficient balance of token to settle the debs"
+          );
+      });
+
+      it("Should not be able to settle a debt if allowance of sender to contract is less than amount", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+        await token.connect(Alice).approve(groupManager, 1);
+        await token.connect(Alice).buyToken({ value: hre.ethers.parseEther("4") });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+
+        await expect(groupManager.connect(Alice)
+          .settleDebt(groupId, 4, Bob)).to.be.revertedWith(
+            "Not enough allowance given to this contract"
+          );
+      });
+
+    });
+
+
+  });
+
+  describe("Group joiner", function () {
+    async function createGroup() {
+      const Token = await hre.ethers.getContractFactory("TrustToken");
+      const token = await Token.deploy();
+      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
+      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
+      const [creator, member2, member3] = await hre.ethers.getSigners();
+
+      // Simulazione: ottieni il groupId senza scrivere
+      const groupId = await taskGroupManager.connect(creator).createGroup.staticCall(
+        "Spesa casa pisa",
+        [member2.address, member3.address]
+      );
+
+      // Esegui davvero la transazione
+      await taskGroupManager.connect(creator).createGroup(
+        "Spesa casa pisa",
+        [member2.address, member3.address]
+      );
+      return { groupManager: taskGroupManager, token: token, groupId: groupId, creator: creator, otherMembers: [member2, member3] };
+    }
+
+    describe("Correct joining of a group", function () {
+
+      it("Should correctly join a group after a member approve the user", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+        const Charlie = (await hre.ethers.getSigners())[4];
+        await groupManager.connect(Charlie).requestToJoin(groupId);
+        await groupManager.connect(Alice).approveAddress(groupId, Charlie);
+        const group = await groupManager.connect(Charlie)
+          .retrieveGroup(groupId);
+
+        expect(group.other_members.some(a => a === Charlie.address)).to.be.true;
+        expect(group.other_members.length).to.be.eq(4);
+      });
+
+      it("Should be able to create a debt after joining the group", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        const Charlie = (await hre.ethers.getSigners())[4];
+        await groupManager.connect(Charlie).requestToJoin(groupId);
+        await groupManager.connect(Alice).approveAddress(groupId, Charlie);
+        await groupManager.connect(Charlie).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+
+        expect(await groupManager.connect(Alice)
+          .groupDebtTo(groupId, Charlie)).to.be.eq(4);
+        expect(await groupManager.connect(Bob)
+          .groupDebtTo(groupId, Charlie)).to.be.eq(4);
+      });
+
+    });
+
+    describe("Errors", function () {
+
+      it("Should not be able to request to join if already member of group", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await expect(groupManager.connect(Alice)
+          .requestToJoin(groupId)).to.be.revertedWith(
+            "You already belong to this group"
+          );
+      });
+
+      it("Should not be able to request to join if he has already submitted a request", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+        const Charlie = (await hre.ethers.getSigners())[4];
+        await groupManager.connect(Charlie).requestToJoin(groupId);
+
+        await expect(groupManager.connect(Charlie).requestToJoin(groupId)).to.be.revertedWith(
+          "You already requested to enter in this group"
+        );
+      });
+
+      it("Should not be able to request to join if he has been approved in the group", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        const Charlie = (await hre.ethers.getSigners())[4];
+        await groupManager.connect(Charlie).requestToJoin(groupId);
+        await groupManager.connect(Alice).approveAddress(groupId, Charlie);
+
+        await expect(groupManager.connect(Charlie).requestToJoin(groupId)).to.be.revertedWith(
+          "You already belong to this group"
+        );
+      });
+
+      it("Should not be able to approve a request if he does not belong to group", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Charlie = (await hre.ethers.getSigners())[4];
+        const Frank = (await hre.ethers.getSigners())[5];
+        await groupManager.connect(Charlie).requestToJoin(groupId);
+
+        await expect(groupManager.connect(Frank).approveAddress(groupId, Charlie)).to.be.revertedWith(
+          "You can approve a request only if you belong to the group"
+        );
+      });
+
+      it("Should not be able to approve a request if the address did not request to enter in the group", async function () {
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Charlie = (await hre.ethers.getSigners())[4];
+
+        await expect(groupManager.connect(creator).approveAddress(groupId, Charlie)).to.be.revertedWith(
+          "The address has not requested to join the group"
+        );
+      });
+
+    });
+
+  });
 });

@@ -3,6 +3,16 @@ pragma solidity ^0.8.28;
 import "../struct/Expense.sol";
 import "../struct/Group.sol";
 
+event ExpenseRegistered(
+    uint256 indexed groupId,
+    address indexed payer,
+    uint256 amount,
+    string description,
+    address[] splitWith,
+    SplitMethod method,
+    uint256[] values
+);
+
 library ExpenseHandler {
 
     function registerExpense(
@@ -24,14 +34,17 @@ library ExpenseHandler {
         } else if (splitMethod == SplitMethod.PERCENTAGE) {
             splitExpensePercentage(group, amount, splitWith, values);
         }
-        Expense memory expense = Expense(
-            description,
-            amount,
+        
+        emit ExpenseRegistered(
+            group.id,
             msg.sender,
+            amount,
+            description,
             splitWith,
-            SplitMethod.EQUAL
+            splitMethod,
+            values
         );
-        group.expenses.push(expense);
+
     }
 
     function splitExpenseEqual(

@@ -4,15 +4,25 @@ import "./struct/Expense.sol";
 import "./struct/Group.sol";
 import "./library/DebtSimplifier.sol";
 import "./library/ExpenseHandler.sol";
+import "./library/GroupAccessControl.sol";
+import "./TrustToken.sol";
 
 import "hardhat/console.sol";
 
 using DebtSimplifier for Group;
 using ExpenseHandler for Group;
+using GroupAccessControl for Group;
 
 contract TrustGroupManager {
     uint256 public nextGroupId;
     mapping(uint256 => Group) private groups;
+    mapping(address => uint256[]) private groupsOfAddress;
+
+    TrustToken private token;
+
+    constructor(address tokenAddress) {
+        token = TrustToken(tokenAddress);
+    }
 
     function createGroup(
         string calldata name,
@@ -25,6 +35,7 @@ contract TrustGroupManager {
         newGroup.creator = msg.sender;
         newGroup.members = other_members;
         newGroup.members.push(msg.sender);
+        groupsOfAddress[msg.sender].push(id);
         return id;
     }
 
@@ -41,11 +52,55 @@ contract TrustGroupManager {
             GroupView({
                 id: group.id,
                 name: group.name,
-                nextExpenseId: group.nextExpenseId,
                 creator: group.creator,
-                other_members: group.members,
-                expenses: group.expenses
+                other_members: group.members
             });
+    }
+
+    function retrieveMyGroups() external view returns (GroupView[] memory) {
+        
+    }
+
+    function requestToJoin(uint256 group_id) external {
+        Group storage group = groups[group_id];
+        require(group.id != 0);
+        group.requestToJoin();
+    }
+
+    function approveAddress(uint256 group_id, address userToApprove) external {
+        Group storage group = groups[group_id];
+        require(group.id != 0);
+        group.approveRequest(userToApprove);
+        groupsOfAddress[userToApprove].push(group.id);
+    }
+
+    function settleDebt(uint256 group_id, uint256 amount, address to) external {
+        Group storage group = groups[group_id];
+        require(group.id != 0);
+        require(
+            isMemberOfGroup(group, msg.sender),
+            "You can not register an expense on a group you do not belong to"
+        );
+        require(
+            isMemberOfGroup(group, to),
+            "You can not settle a debt for a user that does not belong to group"
+        );
+        require(
+            group.debs[msg.sender][to] >= amount,
+            "Debs are smaller than amount!"
+        );
+        require(
+            token.balanceOf(msg.sender) >= amount,
+            "Insufficient balance of token to settle the debs"
+        );
+        require(
+            token.allowance(msg.sender, address(this)) >= amount,
+            "Not enough allowance given to this contract"
+        );
+        require(token.transferFrom(msg.sender, to, amount), "Transfer failed");
+        group.debs[msg.sender][to] -= amount;
+        group.balances[msg.sender] += int256(amount);
+        group.balances[to] -= int256(amount);
     }
 
     function registerExpenses(
@@ -69,14 +124,6 @@ contract TrustGroupManager {
             splitMethod,
             values
         );
-        Expense memory expense = Expense(
-            description,
-            amount,
-            msg.sender,
-            splitWith,
-            SplitMethod.EQUAL
-        );
-        group.expenses.push(expense);
     }
 
     function getMyBalanceInGroup(
