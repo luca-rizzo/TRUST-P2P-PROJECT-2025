@@ -1,1 +1,102 @@
-<p>group-details works!</p>
+<div *ngIf="groupDetails$ | async as group">
+    <app-new-expense [visible]="newExpenseModalOpen" [members]="group.members" (closed)="newExpenseModalOpen = false"
+        (created)="handleNewExpense($event)"></app-new-expense>
+    <ng-container *ngIf="groupDebts$ | async as debts">
+        <app-debs [debts]="debts" [visible]="showDebsModal" (closed)="showDebsModal = false"
+            (simplifyDebts)="simplifyDebts()"></app-debs>
+    </ng-container>
+    <div class="group-details-container">
+        <!-- Top bar -->
+        <div class="group-topbar">
+            <button class="generic-button" (click)="goBack()">← Go Back</button>
+            <div style="display: flex; justify-content: center; flex: 1;">
+                <img src="assets/report.png" alt="report-img" style="height: 35px;" />
+                <h1 class="group-title">{{ group.name }}</h1>
+            </div>
+        </div>
+
+        <!-- Layout principale -->
+        <div class="group-body">
+            <!-- Expenses Area -->
+            <main class="expenses-area">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <h2>Expenses</h2>
+                    <div style="display: flex; justify-content: flex-end; flex: 1; gap: 8px;">
+                        <button class="generic-button" (click)="newExpenseModalOpen = true">Add Expense</button>
+                        <button class="generic-button settle-debt-btn" (click)="newExpenseModalOpen = true">Settle
+                            debt</button>
+                    </div>
+                </div>
+                <div *ngIf="group.expenses?.length === 0" class="placeholder">
+                    No expenses yet.
+                </div>
+                <div>
+                    <div *ngFor="let exp of group.expenses" class="expense-card" >
+                        <div class="expense-header">
+                            <div class="expense-info">
+                                <h3>{{ exp.description }}</h3>
+                                <div class="expense-date">
+                                    {{ Number(exp.timestamp.toString()) * 1000 | date: 'medium' }}
+                                </div>
+                            </div>
+                            <div class="expense-amount">
+                                ${{ exp.amount.toString() }}
+                            </div>
+                        </div>
+    
+                        <div class="expense-meta">
+                            <p>Paid by <strong>{{ exp.paidBy }}</strong></p>
+                            <p>Split with:</p>
+                            <ul>
+                                <li *ngFor="let s of exp.shares">
+                                    {{ s.participant }} owes <strong>${{ s.amount.toString() }}</strong>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Balances -->
+                <section class="balances">
+                    <div style="display: flex; align-items: center; margin-bottom: 15px; gap: 5px;">
+                        <h3>Group Balances</h3>
+                        <div style="display: flex; justify-content: flex-end; flex: 1;">
+                            <button class="generic-button" (click)="showDebtsModal(group.id)">See debs</button>
+                        </div>
+                    </div>
+                    <ul>
+                        <li *ngFor="let b of group.balances">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <img src="assets/account.png" alt="account-img" style="width: 25px; height: 25px;" />
+                                <div style="display: flex; flex-direction: column;">
+                                    <div class="address" style="flex: 1;">{{ b.member }}</div>
+                                    <div *ngIf="isPositive(b.amount)" class="positive" style="margin-left: 10px;">
+                                        Should receive {{ b.amount.toString() }}
+                                    </div>
+                                    <div *ngIf="isNegative(b.amount)" class="negative" style="margin-left: 10px;">
+                                        Should pay {{ b.amount.toString() }}
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </section>
+
+                <!-- Join Requests -->
+                <section class="join-requests">
+                    <h3>Pending Join Requests</h3>
+                    <ul>
+                        <li *ngFor="let addr of group.requestsToJoin">
+                            <span class="address">{{ addr }}</span>
+                            <button class="btn-accept">Accept</button>
+                        </li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+</div>

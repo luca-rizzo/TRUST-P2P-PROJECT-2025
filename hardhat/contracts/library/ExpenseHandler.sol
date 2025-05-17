@@ -3,18 +3,7 @@ pragma solidity ^0.8.28;
 import "../struct/Expense.sol";
 import "../struct/Group.sol";
 
-event ExpenseRegistered(
-    uint256 indexed groupId,
-    address indexed payer,
-    uint256 amount,
-    string description,
-    address[] splitWith,
-    SplitMethod method,
-    uint256[] values
-);
-
 library ExpenseHandler {
-
     function registerExpense(
         Group storage group,
         string calldata description,
@@ -27,24 +16,65 @@ library ExpenseHandler {
             splitWith.length != 0,
             "You can not register an expense to split with no one"
         );
+        uint256[] memory amountsForEach;
         if (splitMethod == SplitMethod.EQUAL) {
-            splitExpenseEqual(group, amount, splitWith, values);
+            amountsForEach = splitExpenseEqual(
+                group,
+                amount,
+                splitWith,
+                values
+            );
         } else if (splitMethod == SplitMethod.EXACT) {
-            splitExpenseExact(group, amount, splitWith, values);
+            amountsForEach = splitExpenseExact(
+                group,
+                amount,
+                splitWith,
+                values
+            );
         } else if (splitMethod == SplitMethod.PERCENTAGE) {
-            splitExpensePercentage(group, amount, splitWith, values);
+            amountsForEach = splitExpensePercentage(
+                group,
+                amount,
+                splitWith,
+                values
+            );
         }
-        
+        uint256 expenseId = saveExpense(group, description, amount, splitWith, amountsForEach);
+
         emit ExpenseRegistered(
             group.id,
+            expenseId,
             msg.sender,
             amount,
             description,
             splitWith,
-            splitMethod,
-            values
+            amountsForEach
         );
+    }
 
+    function saveExpense(
+        Group storage group,
+        string calldata description,
+        uint256 amount,
+        address[] calldata splitWith,
+        uint256[] memory amountsForEach
+    ) internal returns (uint256) {
+        uint256 expenseId = group.nextExpenseId++;
+        Expense storage expense = group.expenses.push();
+        expense.id = expenseId;
+        expense.description = description;
+        expense.amount = amount;
+        expense.paidBy = msg.sender;
+        expense.timestamp = block.timestamp;
+        for (uint i = 0; i < splitWith.length; i++) {
+            expense.shares.push(
+                ExpenseShare({
+                    participant: splitWith[i],
+                    amount: amountsForEach[i]
+                })
+            );
+        }
+        return expenseId;
     }
 
     function splitExpenseEqual(
@@ -52,49 +82,48 @@ library ExpenseHandler {
         uint256 amount,
         address[] calldata splitWith,
         uint256[] calldata values
-    ) private {
+    ) private returns (uint256[] memory) {
         require(values.length == 0, "No values needed for EQUAL");
         uint256 individualAmount = amount / uint256(splitWith.length);
         uint256 remainder = amount % uint256(splitWith.length);
+        uint256[] memory amountForEach = new uint256[](splitWith.length);
         for (uint i = 0; i < splitWith.length; i++) {
             address member = splitWith[i];
-            // i have to pay my part so i do not borrow anything to anyone
-            if (member == msg.sender) continue;
             uint256 amountBorrowed = i < remainder
                 ? individualAmount + 1
                 : individualAmount;
-            updateDebtsGraph(group.debs, member, msg.sender, amountBorrowed);
+            amountForEach[i] = amountBorrowed;
+            // i have to pay my part so i do not register my part as a debt
+            if (member == msg.sender) continue;
+            updateDebtsGraph(group.debts, member, msg.sender, amountBorrowed);
             group.balances[member] -= int256(amountBorrowed);
             group.balances[msg.sender] += int256(amountBorrowed);
         }
+        return amountForEach;
     }
 
     function splitExpenseExact(
         Group storage group,
         uint256 amount,
         address[] calldata splitWith,
-        uint256[] calldata amountsBorrowed
-    ) private {
+        uint256[] calldata amountsForEach
+    ) private returns (uint256[] memory) {
         require(
-            amountsBorrowed.length == splitWith.length,
+            amountsForEach.length == splitWith.length,
             "Number of values passed should match the number of member to split with"
         );
         require(
-            sumValuesEqualTo(amount, amountsBorrowed),
+            sumValuesEqualTo(amount, amountsForEach),
             "Sum of all values should be equal to total amount"
         );
         for (uint i = 0; i < splitWith.length; i++) {
             address member = splitWith[i];
             if (member == msg.sender) continue;
-            updateDebtsGraph(
-                group.debs,
-                member,
-                msg.sender,
-                amountsBorrowed[i]
-            );
-            group.balances[member] -= int256(amountsBorrowed[i]);
-            group.balances[msg.sender] += int256(amountsBorrowed[i]);
+            updateDebtsGraph(group.debts, member, msg.sender, amountsForEach[i]);
+            group.balances[member] -= int256(amountsForEach[i]);
+            group.balances[msg.sender] += int256(amountsForEach[i]);
         }
+        return amountsForEach;
     }
 
     function splitExpensePercentage(
@@ -102,7 +131,7 @@ library ExpenseHandler {
         uint256 amount,
         address[] calldata splitWith,
         uint256[] calldata percentages
-    ) private {
+    ) private returns (uint256[] memory) {
         require(
             percentages.length == splitWith.length,
             "Number of values passed should match the number of member to split with"
@@ -119,10 +148,11 @@ library ExpenseHandler {
             address member = splitWith[i];
             if (member == msg.sender) continue;
             uint256 amountBorrowed = valuesBorrowed[i];
-            updateDebtsGraph(group.debs, member, msg.sender, amountBorrowed);
+            updateDebtsGraph(group.debts, member, msg.sender, amountBorrowed);
             group.balances[member] -= int256(amountBorrowed);
             group.balances[msg.sender] += int256(amountBorrowed);
         }
+        return valuesBorrowed;
     }
 
     function percentageToValue(

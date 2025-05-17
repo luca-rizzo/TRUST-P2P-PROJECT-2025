@@ -4,7 +4,25 @@
   padding: 0;
   box-sizing: border-box;
 }
-body {
+
+html, body {
+  height: 100%;
   font-family: 'Inter', sans-serif;
   background-color: #f9f9f9;
+}
+
+.generic-button {
+  background-color: #2fa4a0;
+  color: #fff;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  align-self: center;
+  transition: background 0.2s;
+
+  &:hover {
+    background-color: #278c89;
+  }
 }

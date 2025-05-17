@@ -1,27 +1,54 @@
 <section class="group-list">
-  <h1 class="title">I miei gruppi</h1>
-
-  <div class="group-card">
-    <div class="group-info">
-      <h2>Weekend Trip</h2>
-      <p>Hai speso: €20 | Ti devono: €40</p>
-    </div>
-    <button class="group-button">Entra</button>
+  <div class="header">
+    <h1 class="title">My groups</h1>
+    <button class="add-button" (click)="showModal = true">+</button>
   </div>
 
-  <div class="group-card">
-    <div class="group-info">
-      <h2>Casa Pisa</h2>
-      <p>Devi: €35 | Ti devono: €10</p>
+  <div *ngFor="let group of groups$ | async" class="group-card">
+    <div class="group-details">
+      <h2 class="group-title">{{ group.name }}</h2>
+      <p class="group-subtitle">Members:</p>
+      <ul class="participants">
+        <li *ngFor="let member of group.members">
+          <span class="avatar-dot">•</span>
+          <span class="address">{{ member }}</span>
+        </li>
+      </ul>
     </div>
-    <button class="group-button">Entra</button>
+    <button class="enter-button" (click)="navigateToGroupPage(group.id)">Show details</button>
   </div>
 
-  <div class="group-card">
-    <div class="group-info">
-      <h2>Viaggio a Berlino</h2>
-      <p>Devi: €15 | Ti devono: €0</p>
+  <!-- Modal -->
+  <div class="modal-backdrop" *ngIf="showModal" (click)="showModal = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <!-- Header fisso -->
+      <div class="modal-header">
+        <h2>Create new TRUST group</h2>
+      </div>
+
+      <!-- Body scrollabile -->
+      <div class="modal-body">
+        <form (ngSubmit)="createGroup()" #form="ngForm" class="form-content">
+          <label for="groupName">Name:</label>
+          <input id="groupName" type="text" name="groupName" [(ngModel)]="newGroupName" placeholder="Nome del gruppo"
+            required />
+
+          <label for="groupMembers">Members (1 per row):</label>
+          <textarea style="width: 100%; resize: none; height: 100%;" id="groupMembers" name="groupMembers" [(ngModel)]="newGroupMembers" rows="5"
+            placeholder="0x123...\n0x456..." required></textarea>
+        </form>
+      </div>
+
+      <!-- Footer fisso -->
+      <div class="modal-footer modal-actions">
+        <button type="button" class="cancel" (click)="showModal = false">Cancel</button>
+        <button type="submit" form="form" class="submit" (click)="createGroup()"
+          [disabled]="!newGroupName || !newGroupMembers">
+          Create
+        </button>
+      </div>
     </div>
-    <button class="group-button">Entra</button>
   </div>
+
 </section>

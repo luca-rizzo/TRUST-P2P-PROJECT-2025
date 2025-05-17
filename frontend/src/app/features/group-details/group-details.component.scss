@@ -1,0 +1,197 @@
+.group-details-container {
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 1rem;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  color: #1f2937;
+
+  .group-topbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .generic-button {
+      background: #3b82f6;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .group-title {
+      font-size: 1.6rem;
+      font-weight: 600;
+
+      &::after {
+        content: "";
+        display: block;
+        width: 80px;
+        height: 4px;
+        background: #2fa4a0; // indigo-500
+        margin: 0.5rem auto 0;
+        border-radius: 2px;
+      }
+    }
+  }
+
+  .group-body {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .expenses-area {
+    flex: 3;
+    background: #f9fafb;
+    border-radius: 1rem;
+    min-height: 400px;
+
+    h2 {
+      font-size: 1.4rem;
+    }
+
+    .placeholder {
+      color: #9ca3af;
+      font-style: italic;
+    }
+
+    .expense-card {
+      background: #ffffff;
+      border-radius: 0.75rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.25rem;
+
+      .expense-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.5rem;
+
+        .expense-info {
+          flex: 1;
+
+          h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 0.25rem;
+            line-height: 1.2;
+          }
+
+          .expense-date {
+            font-size: 0.85rem;
+            color: #6b7280;
+          }
+        }
+
+        .expense-amount {
+          background-color: #fef3c7;
+          color: #92400e;
+          padding: 0.3rem 0.75rem;
+          border-radius: 9999px;
+          font-weight: 600;
+          font-size: 1rem;
+          white-space: nowrap;
+          margin-left: 1rem;
+        }
+      }
+
+      .expense-meta {
+        font-size: 0.9rem;
+        color: #4b5563;
+
+        p {
+          margin: 5px;
+        }
+
+        ul {
+          margin: 0.5rem 0 0;
+          padding-left: 1.2rem;
+
+          li {
+            margin-bottom: 0.25rem;
+            font-family: monospace;
+
+            strong {
+              color: #ef4444;
+            }
+          }
+        }
+      }
+    }
+
+  }
+
+  .sidebar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+
+    section {
+      background: #ffffff;
+      border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      padding: 1.5rem;
+
+      h3 {
+        font-size: 1.2rem;
+        color: #374151;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.75rem;
+          font-family: monospace;
+
+          .address {
+            font-weight: 500;
+            font-size: 0.9rem;
+            word-break: break-all;
+          }
+
+          .positive {
+            color: #10b981;
+            font-weight: bold;
+          }
+
+          .negative {
+            color: #ef4444;
+            font-weight: bold;
+          }
+
+          .btn-accept {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+
+            &:hover {
+              background-color: #2563eb;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.settle-debt-btn {
+  background-color: orange;
+}

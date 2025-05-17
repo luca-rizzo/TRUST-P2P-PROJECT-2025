@@ -1,0 +1,54 @@
+<div class="modal-backdrop" *ngIf="visible" (click)="close()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <!-- Header fisso -->
+    <div class="modal-header">
+      <h2>New Expense</h2>
+    </div>
+
+    <!-- Body scrollabile con form -->
+    <div class="modal-body">
+      <form (ngSubmit)="submit()" #form="ngForm" class="form-content">
+        <label>Description</label>
+        <input type="text" name="description" [(ngModel)]="description" required />
+
+        <label>Amount</label>
+        <input type="number" name="amount" [(ngModel)]="amount" required />
+
+        <label>Split Method</label>
+        <select name="method" [(ngModel)]="splitMethod" required>
+          <option [value]="SplitMethod.EQUAL">Equally divided between selected</option>
+          <option [value]="SplitMethod.EXACT">Set exact amount spent</option>
+          <option [value]="SplitMethod.PERCENTAGE">Set percentage of each</option>
+        </select>
+
+        <label>Participants</label>
+        <div class="participants">
+          <div *ngFor="let member of members">
+            <div class="participant-row">
+              <input type="checkbox" [value]="member" (change)="toggleParticipant(member, $event)" />
+              <span class="address">{{ member }}</span>
+            </div>
+
+            <div *ngIf="splitMethod !== SplitMethod.EQUAL && isSelected(member)">
+              <input
+                type="number"
+                class="split-input"
+                (input)="onValueChange(member.toString(), $event)"
+                [placeholder]="splitMethod === SplitMethod.PERCENTAGE ? '%' : '$'"
+              />
+              <hr class="split-separator" />
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Footer fisso -->
+    <div class="modal-footer modal-actions">
+      <button type="button" class="cancel" (click)="close()">Cancel</button>
+      <button type="submit" form="form" class="submit" (click)="submit()" [disabled]="!form.valid || selectedParticipants.length === 0">
+        Create
+      </button>
+    </div>
+  </div>
+</div>

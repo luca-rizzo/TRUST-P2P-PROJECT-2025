@@ -2,6 +2,7 @@ pragma solidity ^0.8.28;
 import "hardhat/console.sol";
 import "./struct/Expense.sol";
 import "./struct/Group.sol";
+import "./struct/Debts.sol";
 import "./library/DebtSimplifier.sol";
 import "./library/ExpenseHandler.sol";
 import "./library/GroupAccessControl.sol";
@@ -26,39 +27,117 @@ contract TrustGroupManager {
 
     function createGroup(
         string calldata name,
-        address[] calldata other_members
+        address[] calldata otherMembers
     ) public returns (uint256) {
-        uint id = ++nextGroupId;
-        Group storage newGroup = groups[id];
+        uint groupId = ++nextGroupId;
+        Group storage newGroup = groups[groupId];
         newGroup.name = name;
-        newGroup.id = id;
+        newGroup.id = groupId;
         newGroup.creator = msg.sender;
-        newGroup.members = other_members;
-        newGroup.members.push(msg.sender);
-        groupsOfAddress[msg.sender].push(id);
-        return id;
+        for (uint256 i = 0; i < otherMembers.length; i++) {
+            addMemberIfNotPresent(groupId, newGroup.members, otherMembers[i]);
+        }
+        addMemberIfNotPresent(groupId, newGroup.members, msg.sender);
+        newGroup.creationTimestamp = block.timestamp;
+        emit GroupCreated(groupId, name, msg.sender, newGroup.members);
+        return groupId;
+    }
+
+    function addMemberIfNotPresent(
+        uint256 groupId,
+        address[] storage otherAddresses,
+        address toAdd
+    ) private {
+        if (!isIn(otherAddresses, toAdd)) {
+            otherAddresses.push(toAdd);
+            groupsOfAddress[toAdd].push(groupId);
+        }
+    }
+
+    function isIn(
+        address[] storage otherAddresses,
+        address toFind
+    ) private view returns (bool) {
+        for (uint i = 0; i < otherAddresses.length; i++) {
+            if (otherAddresses[i] == toFind) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function retrieveGroup(
         uint256 group_id
-    ) external view returns (GroupView memory) {
+    ) external view returns (GroupDetailsView memory) {
         Group storage group = groups[group_id];
         require(group.id != 0, "You are not member of this group");
         require(
             isMemberOfGroup(group, msg.sender),
             "You are not member of this group"
         );
+        Balance[] memory balances = new Balance[](group.members.length);
+        for (uint i = 0; i < group.members.length; i++) {
+            address fromMember = group.members[i];
+            int256 balanceAmount = group.balances[fromMember];
+            balances[i] = Balance(fromMember, balanceAmount);
+        }
         return
-            GroupView({
+            GroupDetailsView({
                 id: group.id,
                 name: group.name,
-                creator: group.creator,
-                other_members: group.members
+                members: group.members,
+                requestsToJoin: group.requestsToJoin,
+                balances: balances,
+                expenses: group.expenses
             });
     }
 
+    function allGroupDebts(
+        uint256 group_id
+    ) external view returns (DebtNode[] memory) {
+        Group storage group = groups[group_id];
+        require(group.id != 0, "Group does not exist");
+        require(
+            isMemberOfGroup(group, msg.sender),
+            "You are not member of this group"
+        );
+
+        uint numMembers = group.members.length;
+        DebtNode[] memory debts = new DebtNode[](numMembers);
+        for (uint i = 0; i < numMembers; i++) {
+            address fromMember = group.members[i];
+            DebtEdge[] memory tempEdges = new DebtEdge[](numMembers);
+            uint edgeCount = 0;
+            for (uint j = 0; j < numMembers; j++) {
+                address toMember = group.members[j];
+                uint256 debt = group.debts[fromMember][toMember];
+                if (debt > 0) {
+                    tempEdges[edgeCount] = DebtEdge(toMember, debt);
+                    edgeCount++;
+                }
+            }
+            DebtEdge[] memory edges = new DebtEdge[](edgeCount);
+            for (uint k = 0; k < edgeCount; k++) {
+                edges[k] = tempEdges[k];
+            }
+            debts[i] = DebtNode(fromMember, edges);
+        }
+        return debts;
+    }
+
     function retrieveMyGroups() external view returns (GroupView[] memory) {
-        
+        address user = msg.sender;
+        uint256[] storage groupIds = groupsOfAddress[user];
+        GroupView[] memory toReturn = new GroupView[](groupIds.length);
+        for (uint i = 0; i < groupIds.length; i++) {
+            Group storage group = groups[groupIds[i]];
+            toReturn[i] = GroupView({
+                id: group.id,
+                name: group.name,
+                members: group.members
+            });
+        }
+        return toReturn;
     }
 
     function requestToJoin(uint256 group_id) external {
@@ -86,7 +165,7 @@ contract TrustGroupManager {
             "You can not settle a debt for a user that does not belong to group"
         );
         require(
-            group.debs[msg.sender][to] >= amount,
+            group.debts[msg.sender][to] >= amount,
             "Debs are smaller than amount!"
         );
         require(
@@ -98,7 +177,7 @@ contract TrustGroupManager {
             "Not enough allowance given to this contract"
         );
         require(token.transferFrom(msg.sender, to, amount), "Transfer failed");
-        group.debs[msg.sender][to] -= amount;
+        group.debts[msg.sender][to] -= amount;
         group.balances[msg.sender] += int256(amount);
         group.balances[to] -= int256(amount);
     }
@@ -130,10 +209,10 @@ contract TrustGroupManager {
         uint256 group_id
     ) external view returns (int256) {
         Group storage group = groups[group_id];
-        require(group.id != 0, "You are not member of this group");
+        require(group.id != 0, "You are not fromMember of this group");
         require(
             isMemberOfGroup(group, msg.sender),
-            "You are not member of this group"
+            "You are not fromMember of this group"
         );
         return group.balances[msg.sender];
     }
@@ -143,20 +222,20 @@ contract TrustGroupManager {
         address to
     ) external view returns (uint256) {
         Group storage group = groups[group_id];
-        require(group.id != 0, "You are not member of this group");
+        require(group.id != 0, "You are not fromMember of this group");
         require(
             isMemberOfGroup(group, msg.sender),
-            "You are not member of this group"
+            "You are not fromMember of this group"
         );
-        return group.debs[msg.sender][to];
+        return group.debts[msg.sender][to];
     }
 
     function isMemberOfGroup(
         Group storage group,
-        address member
+        address fromMember
     ) private view returns (bool) {
         for (uint256 i = 0; i < group.members.length; i++) {
-            if (member == group.members[i]) {
+            if (fromMember == group.members[i]) {
                 return true;
             }
         }

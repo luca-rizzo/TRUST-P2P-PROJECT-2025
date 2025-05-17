@@ -3,10 +3,11 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import hre from "hardhat";
+const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 describe("TrustGroupManager", function () {
 
-  
+
   async function deployManager() {
     const Token = await hre.ethers.getContractFactory("TrustToken");
     const token = await Token.deploy();
@@ -61,6 +62,44 @@ describe("TrustGroupManager", function () {
         expect(group_by_second.name).to.equal("Spesa casa pisa");
       });
 
+      it("Should contain a member only once even if i pass him twice in otherMembers", async function () {
+        const Token = await hre.ethers.getContractFactory("TrustToken");
+        const token = await Token.deploy();
+        const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
+        const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
+        const [creator, member2, member3] = await hre.ethers.getSigners();
+        await taskGroupManager.connect(creator).createGroup(
+          "Spesa casa pisa",
+          [member2.address, member3.address, member2.address, member2.address, member3.address]
+        );
+
+        const group = await taskGroupManager.connect(creator).retrieveGroup(1);
+
+        expect(group.members.length).to.be.eq(3);
+        expect(group.members.some(a => a === creator.address)).to.be.true;
+        expect(group.members.some(a => a === member2.address)).to.be.true;
+        expect(group.members.some(a => a === member3.address)).to.be.true;
+      });
+
+      it("Should contain creator only once even if i pass him in otherMembers", async function () {
+        const Token = await hre.ethers.getContractFactory("TrustToken");
+        const token = await Token.deploy();
+        const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
+        const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
+        const [creator, member2, member3] = await hre.ethers.getSigners();
+        await taskGroupManager.connect(creator).createGroup(
+          "Spesa casa pisa",
+          [member2.address, member3.address, creator]
+        );
+
+        const group = await taskGroupManager.connect(creator).retrieveGroup(1);
+
+        expect(group.members.length).to.be.eq(3);
+        expect(group.members.some(a => a === creator.address)).to.be.true;
+        expect(group.members.some(a => a === member2.address)).to.be.true;
+        expect(group.members.some(a => a === member3.address)).to.be.true;
+      });
+
     });
 
     describe("Validations", function () {
@@ -86,7 +125,21 @@ describe("TrustGroupManager", function () {
 
     describe("Events", function () {
       it("Should emit an event on group creation", async function () {
+        const Token = await hre.ethers.getContractFactory("TrustToken");
+        const token = await Token.deploy();
+        const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
+        const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
+        const [creator, member2, member3] = await hre.ethers.getSigners();
 
+        await expect(taskGroupManager.connect(creator).createGroup(
+          "Spesa casa pisa",
+          [member2.address, member3.address]))
+          .to.emit(taskGroupManager, "GroupCreated").withArgs(
+            1, // Primo ID gruppo, se parte da 1
+            "Spesa casa pisa",
+            creator.address,
+            [member2.address, member3.address, creator.address] // Ordine come salvato nello storage
+          );
       });
     });
 
@@ -132,6 +185,25 @@ describe("TrustGroupManager", function () {
             .getMyBalanceInGroup(groupId)).to.be.eq(8);
           expect(await groupManager.connect(firstMember)
             .getMyBalanceInGroup(groupId)).to.be.eq(-8);
+        });
+
+        it("Should properly register one expenses splitted with one payer different than registrator", async function () {
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const expenseRegistator = creator;
+          const firstMember = otherMembers[0];
+
+          await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 8, [firstMember], 0, []);
+          const group = await groupManager.connect(firstMember)
+            .retrieveGroup(groupId);
+          expect(group.expenses.length).to.be.eq(1);
+          const expense = group.expenses[0];
+          expect(expense.id).to.equal(0); // prima spesa nel gruppo
+          expect(expense.description).to.equal("Paper");
+          expect(expense.amount).to.equal(8);
+          expect(expense.paidBy).to.equal(expenseRegistator.address);
+          expect(expense.shares.length).to.be.equal(1);
+          expect(expense.shares[0].participant).to.equal(firstMember.address);
+          expect(expense.shares[0].amount).to.equal(8);
         });
 
         it("Should properly handle debs for one expenses splitted with two payers different than registrator", async function () {
@@ -317,6 +389,29 @@ describe("TrustGroupManager", function () {
             .groupDebtTo(groupId, expenseRegistator)).to.be.eq(5);
         });
 
+        it("Should properly register one expenses splitted with other two member", async function () {
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const expenseRegistator = creator;
+          const firstMember = otherMembers[0];
+          const secondMember = otherMembers[1];
+
+          await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 8, [expenseRegistator, firstMember, secondMember], 1, [3, 1, 4]);
+          const group = await groupManager.connect(expenseRegistator)
+            .retrieveGroup(groupId);
+          expect(group.expenses.length).to.be.eq(1);
+          const expense = group.expenses[0];
+          expect(expense.id).to.equal(0); // prima spesa nel gruppo
+          expect(expense.description).to.equal("Paper");
+          expect(expense.amount).to.equal(8);
+          expect(expense.paidBy).to.equal(expenseRegistator.address);
+          expect(expense.shares[0].participant).to.equal(expenseRegistator.address);
+          expect(expense.shares[0].amount).to.equal(3);
+          expect(expense.shares[1].participant).to.equal(firstMember.address);
+          expect(expense.shares[1].amount).to.equal(1);
+          expect(expense.shares[2].participant).to.equal(secondMember.address);
+          expect(expense.shares[2].amount).to.equal(4);
+        });
+
         it("Should properly handle debs for one expenses splitted with one payers different than registrator", async function () {
           const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
           const expenseRegistator = creator;
@@ -459,6 +554,28 @@ describe("TrustGroupManager", function () {
             .groupDebtTo(groupId, expenseRegistator)).to.be.eq(15);
           expect(await groupManager.connect(secondMember)
             .groupDebtTo(groupId, expenseRegistator)).to.be.eq(45);
+        });
+
+        it("Should properly register one expenses splitted with two member", async function () {
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const expenseRegistator = creator;
+          const firstMember = otherMembers[0];
+          const secondMember = otherMembers[1];
+
+          await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 60, [firstMember, secondMember], 2, [30, 70]);
+          const group = await groupManager.connect(expenseRegistator)
+            .retrieveGroup(groupId);
+          expect(group.expenses.length).to.be.eq(1);
+          const expense = group.expenses[0];
+          expect(expense.id).to.equal(0); // prima spesa nel gruppo
+          expect(expense.description).to.equal("Paper");
+          expect(expense.amount).to.equal(60);
+          expect(expense.paidBy).to.equal(expenseRegistator.address);
+          expect(expense.shares.length).to.equal(2);
+          expect(expense.shares[0].participant).to.equal(firstMember.address);
+          expect(expense.shares[0].amount).to.equal(18);
+          expect(expense.shares[1].participant).to.equal(secondMember.address);
+          expect(expense.shares[1].amount).to.equal(42);
         });
 
         it("Should properly handle debs for one expenses splitted with two payers different than registrator with remainder (round)", async function () {
@@ -612,8 +729,70 @@ describe("TrustGroupManager", function () {
       });
 
       describe("Events", function () {
-        it("Should emit an event on group creation", async function () {
+        it("Should emit an event on expense registration EQUAL", async function () {
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const alice = creator;
+          const bob = otherMembers[0];
+          const charlie = otherMembers[1];
 
+          await expect(groupManager.connect(alice).registerExpenses(
+            groupId, "Dinner", 90,
+            [alice.address, bob.address, charlie.address], 0,
+            []
+          )).to.emit(groupManager, "ExpenseRegistered")
+            .withArgs(
+              groupId,
+              anyValue,
+              alice.address,
+              90,
+              "Dinner",
+              [alice.address, bob.address, charlie.address],
+              [30, 30, 30]
+            );
+        });
+
+        it("Should emit an event on expense registration EXACT", async function () {
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const alice = creator;
+          const bob = otherMembers[0];
+          const charlie = otherMembers[1];
+
+          await expect(groupManager.connect(alice).registerExpenses(
+            groupId, "Dinner", 90,
+            [bob.address, charlie.address], 1,
+            [20, 70]
+          )).to.emit(groupManager, "ExpenseRegistered")
+            .withArgs(
+              groupId,
+              anyValue,
+              alice.address,
+              90,
+              "Dinner",
+              [bob.address, charlie.address],
+              [20, 70]
+            );
+        });
+
+        it("Should emit an event on expense registration PERCENTAGE", async function () {
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const alice = creator;
+          const bob = otherMembers[0];
+          const charlie = otherMembers[1];
+
+          await expect(groupManager.connect(alice).registerExpenses(
+            groupId, "Dinner", 60,
+            [bob.address, charlie.address], 2,
+            [30, 70]
+          )).to.emit(groupManager, "ExpenseRegistered")
+            .withArgs(
+              groupId,
+              anyValue,
+              alice.address,
+              60,
+              "Dinner",
+              [bob.address, charlie.address],
+              [18, 42]
+            );
         });
       });
     })
@@ -1246,8 +1425,8 @@ describe("TrustGroupManager", function () {
         const group = await groupManager.connect(Charlie)
           .retrieveGroup(groupId);
 
-        expect(group.other_members.some(a => a === Charlie.address)).to.be.true;
-        expect(group.other_members.length).to.be.eq(4);
+        expect(group.members.some(a => a === Charlie.address)).to.be.true;
+        expect(group.members.length).to.be.eq(4);
       });
 
       it("Should be able to create a debt after joining the group", async function () {

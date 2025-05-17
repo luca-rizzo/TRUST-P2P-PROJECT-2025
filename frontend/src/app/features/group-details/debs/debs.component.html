@@ -1,0 +1,31 @@
+<div class="modal-backdrop" *ngIf="visible" (click)="close()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>Group Debt Summary</h2>
+      <div style="display: flex; justify-content: flex-end; flex: 1;">
+        <button class="generic-button" (click)="_simplyfyDebts()">Simplify debts</button>
+      </div>
+    </div>
+
+    <div class="modal-body scrollable">
+      <div class="debts-summary">
+        <div *ngFor="let node of debts" class="debt-block">
+          <div class="debtor-title">{{ node.from }}</div>
+          <div *ngIf="node.edges.length === 0" class="no-debts">Has no debts</div>
+          <ul *ngIf="node.edges.length > 0">
+            <li *ngFor="let edge of node.edges">
+              <span class="amount">\${{ edge.amount.toString() | number: '1.2-2' }}</span>
+              <span class="text">to</span>
+              <span class="creditor">{{ edge.to }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="cancel" (click)="close()">Close</button>
+    </div>
+  </div>
+</div>

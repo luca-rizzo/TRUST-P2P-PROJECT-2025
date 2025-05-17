@@ -2,11 +2,7 @@ pragma solidity ^0.8.28;
 
 import "../struct/Expense.sol";
 import "../struct/Group.sol";
-
-struct Balance {
-    address member;
-    int256 amount;
-}
+import "../struct/Balance.sol";
 
 library DebtSimplifier {
 
@@ -26,7 +22,7 @@ library DebtSimplifier {
             uint256 largestCreditorAmount = abs(largestCreditor.amount);
             uint256 largestDebitorAmount = abs(largestDebitor.amount);
             uint256 minValue = min(largestCreditorAmount, largestDebitorAmount);
-            group.debs[largestDebitor.member][
+            group.debts[largestDebitor.member][
                 largestCreditor.member
             ] = minValue;
             //positive amount means that previous largest creditor still needs to receive some money
@@ -78,8 +74,8 @@ library DebtSimplifier {
         address[] storage members = group.members;
         for (uint i = 0; i < members.length; i++) {
             for (uint j = i + 1; j < members.length; j++) {
-                group.debs[members[i]][members[j]] = 0;
-                group.debs[members[j]][members[i]] = 0;
+                group.debts[members[i]][members[j]] = 0;
+                group.debts[members[j]][members[i]] = 0;
             }
         }
     }
