@@ -8,6 +8,7 @@ import "./library/DebtSettler.sol";
 import "./library/ExpenseHandler.sol";
 import "./library/GroupAccessControl.sol";
 import "./TrustToken.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "hardhat/console.sol";
 
@@ -15,6 +16,7 @@ using DebtSimplifier for Group;
 using DebtSettler for Group;
 using ExpenseHandler for Group;
 using GroupAccessControl for Group;
+using EnumerableSet for EnumerableSet.AddressSet;
 
 contract TrustGroupManager {
     uint256 public nextGroupId;
@@ -37,35 +39,12 @@ contract TrustGroupManager {
         newGroup.id = groupId;
         newGroup.creator = msg.sender;
         for (uint256 i = 0; i < otherMembers.length; i++) {
-            addMemberIfNotPresent(groupId, newGroup.members, otherMembers[i]);
+            newGroup.members.add(otherMembers[i]);
         }
-        addMemberIfNotPresent(groupId, newGroup.members, msg.sender);
+        newGroup.members.add(msg.sender);
         newGroup.creationTimestamp = block.timestamp;
-        emit GroupCreated(groupId, name, msg.sender, newGroup.members);
+        emit GroupCreated(groupId, name, msg.sender, newGroup.members.values());
         return groupId;
-    }
-
-    function addMemberIfNotPresent(
-        uint256 groupId,
-        address[] storage otherAddresses,
-        address toAdd
-    ) private {
-        if (!isIn(otherAddresses, toAdd)) {
-            otherAddresses.push(toAdd);
-            groupsOfAddress[toAdd].push(groupId);
-        }
-    }
-
-    function isIn(
-        address[] storage otherAddresses,
-        address toFind
-    ) private view returns (bool) {
-        for (uint i = 0; i < otherAddresses.length; i++) {
-            if (otherAddresses[i] == toFind) {
-                return true;
-            }
-        }
-        return false;
     }
 
     function retrieveGroup(
@@ -77,9 +56,9 @@ contract TrustGroupManager {
             isMemberOfGroup(group, msg.sender),
             "You are not member of this group"
         );
-        Balance[] memory balances = new Balance[](group.members.length);
-        for (uint i = 0; i < group.members.length; i++) {
-            address fromMember = group.members[i];
+        Balance[] memory balances = new Balance[](group.members.length());
+        for (uint i = 0; i < group.members.length(); i++) {
+            address fromMember = group.members.at(i);
             int256 balanceAmount = group.balances[fromMember];
             balances[i] = Balance(fromMember, balanceAmount);
         }
@@ -87,8 +66,8 @@ contract TrustGroupManager {
             GroupDetailsView({
                 id: group.id,
                 name: group.name,
-                members: group.members,
-                requestsToJoin: group.requestsToJoin,
+                members: group.members.values(),
+                requestsToJoin: group.requestsToJoin.values(),
                 balances: balances,
                 expenses: group.expenses
             });
@@ -104,14 +83,14 @@ contract TrustGroupManager {
             "You are not member of this group"
         );
 
-        uint numMembers = group.members.length;
+        uint numMembers = group.members.length();
         DebtNode[] memory debts = new DebtNode[](numMembers);
         for (uint i = 0; i < numMembers; i++) {
-            address fromMember = group.members[i];
+            address fromMember = group.members.at(i);
             DebtEdge[] memory tempEdges = new DebtEdge[](numMembers);
             uint edgeCount = 0;
             for (uint j = 0; j < numMembers; j++) {
-                address toMember = group.members[j];
+                address toMember = group.members.at(j);
                 uint256 debt = group.debts[fromMember][toMember];
                 if (debt > 0) {
                     tempEdges[edgeCount] = DebtEdge(toMember, debt);
@@ -136,7 +115,7 @@ contract TrustGroupManager {
             toReturn[i] = GroupView({
                 id: group.id,
                 name: group.name,
-                members: group.members
+                members: group.members.values()
             });
         }
         return toReturn;
@@ -221,12 +200,7 @@ contract TrustGroupManager {
         Group storage group,
         address fromMember
     ) private view returns (bool) {
-        for (uint256 i = 0; i < group.members.length; i++) {
-            if (fromMember == group.members[i]) {
-                return true;
-            }
-        }
-        return false;
+        return group.members.contains(fromMember);
     }
 
     function allMemberOfGroup(

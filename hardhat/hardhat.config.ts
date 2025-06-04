@@ -3,6 +3,7 @@ import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "hardhat-gas-reporter";
 import "@nomicfoundation/hardhat-ignition";
+import "@typechain/hardhat";
 import * as dotenv from "dotenv";
 dotenv.config();
 

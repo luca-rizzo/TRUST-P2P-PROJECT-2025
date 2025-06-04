@@ -12,7 +12,7 @@ contract TrustToken is ERC20 {
          owner = msg.sender;
     }
 
-    function buyToken() public payable {
+    function buyTokens() public payable {
         require(msg.value > 0);
         uint256 amountToMint = msg.value * rate;
         _mint(msg.sender, amountToMint);

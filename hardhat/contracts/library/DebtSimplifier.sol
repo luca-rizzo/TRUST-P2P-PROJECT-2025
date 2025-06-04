@@ -3,6 +3,10 @@ pragma solidity ^0.8.28;
 import "../struct/Expense.sol";
 import "../struct/Group.sol";
 import "../struct/Balance.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
+using EnumerableSet for EnumerableSet.AddressSet;
+
 
 library DebtSimplifier {
 
@@ -43,13 +47,14 @@ library DebtSimplifier {
     function extractSortedCreditorsAndDebitors(
         Group storage group
     ) private view returns (Balance[] memory, uint, Balance[] memory, uint) {
-        Balance[] memory creditors = new Balance[](group.members.length);
-        Balance[] memory debitors = new Balance[](group.members.length);
+        uint memberCount = group.members.length();
+        Balance[] memory creditors = new Balance[](memberCount);
+        Balance[] memory debitors = new Balance[](memberCount);
         uint credSize = 0;
         uint debtSize = 0;
 
-        for (uint i = 0; i < group.members.length; i++) {
-            address member = group.members[i];
+        for (uint i = 0; i < memberCount; i++) {
+            address member = group.members.at(i);
             int256 balanceAmount = group.balances[member];
             if (balanceAmount > 0) {
                 creditors[credSize++] = Balance(member, balanceAmount);
@@ -71,11 +76,12 @@ library DebtSimplifier {
     }
 
     function resetDebtGraph(Group storage group) private {
-        address[] storage members = group.members;
-        for (uint i = 0; i < members.length; i++) {
-            for (uint j = i + 1; j < members.length; j++) {
-                group.debts[members[i]][members[j]] = 0;
-                group.debts[members[j]][members[i]] = 0;
+        EnumerableSet.AddressSet storage members = group.members;
+        uint memberCount = members.length();
+        for (uint i = 0; i < memberCount; i++) {
+            for (uint j = i + 1; j < memberCount; j++) {
+                group.debts[members.at(i)][members.at(j)] = 0;
+                group.debts[members.at(j)][members.at(i)] = 0;
             }
         }
     }

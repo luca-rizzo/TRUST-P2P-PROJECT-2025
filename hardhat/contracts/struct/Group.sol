@@ -2,6 +2,7 @@ pragma solidity ^0.8.28;
 
 import './Expense.sol';
 import './Balance.sol';
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 struct GroupView {
     uint256 id;
@@ -29,8 +30,8 @@ struct Group {
     uint256 id;
     string name;
     address creator;
-    address[] members;
-    address[] requestsToJoin;
+    EnumerableSet.AddressSet members;
+    EnumerableSet.AddressSet requestsToJoin;
     uint256 nextExpenseId;
     Expense[] expenses;
     mapping(address => mapping(address => uint256)) debts;

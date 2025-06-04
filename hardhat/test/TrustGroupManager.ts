@@ -1,6 +1,4 @@
-import {
-  loadFixture
-} from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import hre from "hardhat";
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
@@ -1315,7 +1313,7 @@ describe("TrustGroupManager", function () {
         const Alice = otherMembers[1];
         
         await token.connect(Alice).approve(groupManager, parseAmount(10));
-        await token.connect(Alice).buyToken({ value: parseAmount(10) });
+        await token.connect(Alice).buyTokens({ value: parseAmount(10) });
         await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
         await groupManager.connect(Alice)
           .settleDebt(groupId, parseAmount(2), Bob);
@@ -1365,7 +1363,7 @@ describe("TrustGroupManager", function () {
         const Alice = otherMembers[1];
         await token.connect(Alice).approve(groupManager, parseAmount(10));
         //now she has 3TT
-        await token.connect(Alice).buyToken({ value: parseAmount(0.03) });
+        await token.connect(Alice).buyTokens({ value: parseAmount(0.03) });
         await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
 
         await expect(groupManager.connect(Alice)
@@ -1379,7 +1377,7 @@ describe("TrustGroupManager", function () {
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
         await token.connect(Alice).approve(groupManager, parseAmount(1));
-        await token.connect(Alice).buyToken({ value: parseAmount(4) });
+        await token.connect(Alice).buyTokens({ value: parseAmount(4) });
         await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
 
         await expect(groupManager.connect(Alice)
