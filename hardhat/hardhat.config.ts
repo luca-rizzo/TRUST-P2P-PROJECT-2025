@@ -1,13 +1,21 @@
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-chai-matchers";
+import "hardhat-gas-reporter";
+import "@nomicfoundation/hardhat-ignition";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: "0.8.28",
   gasReporter: {
-    outputFile: 'gas-report.txt',
     enabled: true,
     currency: 'EUR',
-    gasPrice: 5,
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    token: 'ETH',
+    gasPriceApi: `https://api.etherscan.io/api?module=proxy&action=eth_gasPrice&apikey=${process.env.ETHERSCAN_API_KEY}`,
+    outputFile: 'gas-report.txt',
+    noColors: true
   }
 };
 
