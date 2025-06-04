@@ -19,13 +19,6 @@ struct GroupDetailsView {
     Expense[] expenses;
 }
 
-event GroupCreated(
-    uint256 groupId,
-    string name,
-    address creator,
-    address[] members
-);
-
 struct Group {
     uint256 id;
     string name;

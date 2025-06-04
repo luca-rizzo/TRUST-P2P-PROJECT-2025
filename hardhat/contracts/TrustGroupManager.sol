@@ -6,7 +6,8 @@ import "./struct/Debts.sol";
 import "./library/DebtSimplifier.sol";
 import "./library/DebtSettler.sol";
 import "./library/ExpenseHandler.sol";
-import "./library/GroupAccessControl.sol";
+import "./library/GroupRequestHandler.sol";
+import "./library/GroupUtility.sol";
 import "./TrustToken.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
@@ -15,10 +16,12 @@ import "hardhat/console.sol";
 using DebtSimplifier for Group;
 using DebtSettler for Group;
 using ExpenseHandler for Group;
-using GroupAccessControl for Group;
+using GroupRequestHandler for Group;
+using GroupUtility for Group;
 using EnumerableSet for EnumerableSet.AddressSet;
 
 contract TrustGroupManager {
+    
     uint256 public nextGroupId;
     mapping(uint256 => Group) private groups;
     mapping(address => uint256[]) private groupsOfAddress;
@@ -35,15 +38,7 @@ contract TrustGroupManager {
     ) public returns (uint256) {
         uint groupId = ++nextGroupId;
         Group storage newGroup = groups[groupId];
-        newGroup.name = name;
-        newGroup.id = groupId;
-        newGroup.creator = msg.sender;
-        for (uint256 i = 0; i < otherMembers.length; i++) {
-            newGroup.members.add(otherMembers[i]);
-        }
-        newGroup.members.add(msg.sender);
-        newGroup.creationTimestamp = block.timestamp;
-        emit GroupCreated(groupId, name, msg.sender, newGroup.members.values());
+        newGroup.initializeGroup(name, groupId, otherMembers);
         return groupId;
     }
 
@@ -53,7 +48,7 @@ contract TrustGroupManager {
         Group storage group = groups[group_id];
         require(group.id != 0, "You are not member of this group");
         require(
-            isMemberOfGroup(group, msg.sender),
+            group.containsMember(msg.sender),
             "You are not member of this group"
         );
         Balance[] memory balances = new Balance[](group.members.length());
@@ -79,7 +74,7 @@ contract TrustGroupManager {
         Group storage group = groups[group_id];
         require(group.id != 0, "Group does not exist");
         require(
-            isMemberOfGroup(group, msg.sender),
+            group.containsMember(msg.sender),
             "You are not member of this group"
         );
 
@@ -134,17 +129,25 @@ contract TrustGroupManager {
         groupsOfAddress[userToApprove].push(group.id);
     }
 
+    function rejectAddress(uint256 group_id, address userToReject) external {
+        Group storage group = groups[group_id];
+        require(group.id != 0);
+        group.rejectRequest(userToReject);
+    }
+
     function settleDebt(uint256 group_id, uint256 amount, address to) external {
         Group storage group = groups[group_id];
         require(group.id != 0);
         require(
-            isMemberOfGroup(group, msg.sender),
+            group.containsMember(msg.sender),
             "You can not register an expense on a group you do not belong to"
         );
         require(
-            isMemberOfGroup(group, to),
+            group.containsMember(to),
             "You can not settle a debt for a user that does not belong to group"
         );
+        require(amount > 0, "Amount must be greater than 0");
+        require(msg.sender != to, "You can not settle a debt to yourself");
         group.settleDebt(amount, to, token);
     }
 
@@ -159,9 +162,10 @@ contract TrustGroupManager {
         Group storage group = groups[group_id];
         require(group.id != 0);
         require(
-            isMemberOfGroup(group, msg.sender),
+            group.containsMember(msg.sender),
             "You can not register an expense on a group you do not belong to"
         );
+        require(amount > 0, "Amount must be greater than 0");
         group.registerExpense(
             description,
             amount,
@@ -177,7 +181,7 @@ contract TrustGroupManager {
         Group storage group = groups[group_id];
         require(group.id != 0, "You are not fromMember of this group");
         require(
-            isMemberOfGroup(group, msg.sender),
+            group.containsMember(msg.sender),
             "You are not fromMember of this group"
         );
         return group.balances[msg.sender];
@@ -188,38 +192,19 @@ contract TrustGroupManager {
         address to
     ) external view returns (uint256) {
         Group storage group = groups[group_id];
-        require(group.id != 0, "You are not fromMember of this group");
+        require(group.id != 0, "You are not member of this group");
         require(
-            isMemberOfGroup(group, msg.sender),
-            "You are not fromMember of this group"
+            group.containsMember(msg.sender),
+            "You are not member of this group"
         );
         return group.debts[msg.sender][to];
-    }
-
-    function isMemberOfGroup(
-        Group storage group,
-        address fromMember
-    ) private view returns (bool) {
-        return group.members.contains(fromMember);
-    }
-
-    function allMemberOfGroup(
-        Group storage group,
-        address[] calldata members
-    ) private view returns (bool) {
-        for (uint256 i = 0; i < members.length; i++) {
-            if (!isMemberOfGroup(group, members[i])) {
-                return false;
-            }
-        }
-        return true;
     }
 
     function simplifyDebt(uint256 groupId) external {
         Group storage group = groups[groupId];
         require(group.id != 0, "Group does not exists");
         require(
-            isMemberOfGroup(group, msg.sender),
+            group.containsMember(msg.sender),
             "You can not simplify debts of a group you do not belong to"
         );
         group.simplifyDebt();

@@ -6,7 +6,7 @@ import "../struct/Balance.sol";
 import "../TrustToken.sol";
 
 library DebtSettler {
-
+    
     event DebtSettled(
         uint256 indexed groupId,
         address indexed from,
@@ -22,7 +22,7 @@ library DebtSettler {
     ) internal {
         require(
             group.debts[msg.sender][to] >= amount,
-            "Debs are smaller than amount!"
+            "Debts are smaller than amount!"
         );
         require(
             token.balanceOf(msg.sender) >= amount,
@@ -32,10 +32,12 @@ library DebtSettler {
             token.allowance(msg.sender, address(this)) >= amount,
             "Not enough allowance given to this contract"
         );
-        require(token.transferFrom(msg.sender, to, amount), "Transfer failed");
+        //even if we do not interact with external accounts, we still use the Checks Effects Interactions pattern
+        //and first update the state of the group, then trasfer amount
         group.debts[msg.sender][to] -= amount;
         group.balances[msg.sender] += int256(amount);
         group.balances[to] -= int256(amount);
+        require(token.transferFrom(msg.sender, to, amount), "Transfer failed");
         emit DebtSettled(group.id, msg.sender, to, amount);
     }
 }

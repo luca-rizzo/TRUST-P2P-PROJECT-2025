@@ -1330,7 +1330,7 @@ describe("TrustGroupManager", function () {
         const Alice = otherMembers[1];
 
         await token.connect(Alice).approve(groupManager, parseAmount(10));
-        await token.connect(Alice).buyToken({ value: parseAmount(10) });
+        await token.connect(Alice).buyTokens({ value: parseAmount(10) });
         await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
         await groupManager.connect(Alice)
           .settleDebt(groupId, parseAmount(4), Bob);
@@ -1345,6 +1345,31 @@ describe("TrustGroupManager", function () {
 
     describe("Errors", function () {
 
+      it("Should not be able to settle a debt if amount is 0", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
+        await expect(groupManager.connect(Alice)
+          .settleDebt(groupId, parseAmount(0), Bob)).to.be.revertedWith(
+            "Amount must be greater than 0"
+          );
+      });
+
+      it("Should not be able to settle a debt to yourself", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Bob = otherMembers[0];
+        const Alice = otherMembers[1];
+
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
+        await expect(groupManager.connect(Alice)
+          .settleDebt(groupId, parseAmount(1), Alice)).to.be.revertedWith(
+            "You can not settle a debt to yourself"
+          );
+      });
+
+
       it("Should not be able to settle a debt if amount is grater than debt", async function () {
         const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
         const Bob = otherMembers[0];
@@ -1353,7 +1378,7 @@ describe("TrustGroupManager", function () {
         await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
         await expect(groupManager.connect(Alice)
           .settleDebt(groupId, parseAmount(10), Bob)).to.be.revertedWith(
-            "Debs are smaller than amount!"
+            "Debts are smaller than amount!"
           );
       });
 
@@ -1509,5 +1534,37 @@ describe("TrustGroupManager", function () {
 
     });
 
+    describe("Events", function () {
+      it("Should emit an event when a user requests to join a group", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Charlie = (await hre.ethers.getSigners())[4];
+
+        await expect(groupManager.connect(Charlie).requestToJoin(groupId))
+          .to.emit(groupManager, "RequestToJoin")
+          .withArgs(groupId, Charlie.address);
+      });
+
+      it("Should emit an event when a user is approved to join a group", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Alice = otherMembers[1];
+        const Charlie = (await hre.ethers.getSigners())[4];
+
+        await groupManager.connect(Charlie).requestToJoin(groupId);
+        await expect(groupManager.connect(Alice).approveAddress(groupId, Charlie))
+          .to.emit(groupManager, "UserApproved")
+          .withArgs(groupId, Charlie.address);
+      });
+
+      it("Should emit an event when a a request is rejected", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const Alice = otherMembers[1];
+        const Charlie = (await hre.ethers.getSigners())[4];
+
+        await groupManager.connect(Charlie).requestToJoin(groupId);
+        await expect(groupManager.connect(Alice).rejectAddress(groupId, Charlie.address))
+          .to.emit(groupManager, "UserRejected")
+          .withArgs(groupId, Charlie.address);
+      });
+   });
   });
 });

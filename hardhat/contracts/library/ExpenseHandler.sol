@@ -4,7 +4,17 @@ import "../struct/Expense.sol";
 import "../struct/Group.sol";
 
 library ExpenseHandler {
-    
+
+    event ExpenseRegistered(
+        uint256 indexed groupId,
+        uint256 indexed expenseId,
+        address indexed payer,
+        uint256 amount,
+        string description,
+        address[] splitWith,
+        uint256[] amountForEach
+    );
+
     function registerExpense(
         Group storage group,
         string calldata description,
@@ -40,7 +50,13 @@ library ExpenseHandler {
                 values
             );
         }
-        uint256 expenseId = saveExpense(group, description, amount, splitWith, amountsForEach);
+        uint256 expenseId = saveExpense(
+            group,
+            description,
+            amount,
+            splitWith,
+            amountsForEach
+        );
 
         emit ExpenseRegistered(
             group.id,
@@ -96,9 +112,7 @@ library ExpenseHandler {
             amountForEach[i] = amountBorrowed;
             // i have to pay my part so i do not register my part as a debt
             if (member == msg.sender) continue;
-            updateDebtsGraph(group.debts, member, msg.sender, amountBorrowed);
-            group.balances[member] -= int256(amountBorrowed);
-            group.balances[msg.sender] += int256(amountBorrowed);
+            updateDebtAndBalances(group, member, msg.sender, amountBorrowed);
         }
         return amountForEach;
     }
@@ -120,9 +134,7 @@ library ExpenseHandler {
         for (uint i = 0; i < splitWith.length; i++) {
             address member = splitWith[i];
             if (member == msg.sender) continue;
-            updateDebtsGraph(group.debts, member, msg.sender, amountsForEach[i]);
-            group.balances[member] -= int256(amountsForEach[i]);
-            group.balances[msg.sender] += int256(amountsForEach[i]);
+            updateDebtAndBalances(group, member, msg.sender, amountsForEach[i]);
         }
         return amountsForEach;
     }
@@ -149,9 +161,7 @@ library ExpenseHandler {
             address member = splitWith[i];
             if (member == msg.sender) continue;
             uint256 amountBorrowed = valuesBorrowed[i];
-            updateDebtsGraph(group.debts, member, msg.sender, amountBorrowed);
-            group.balances[member] -= int256(amountBorrowed);
-            group.balances[msg.sender] += int256(amountBorrowed);
+            updateDebtAndBalances(group, member, msg.sender, amountBorrowed);
         }
         return valuesBorrowed;
     }
@@ -194,14 +204,15 @@ library ExpenseHandler {
         return sum == expected;
     }
 
-    function isIn(
-        address[] calldata members,
-        address toCheck
-    ) private pure returns (bool) {
-        for (uint i = 0; i < members.length; i++) {
-            if (members[i] == toCheck) return true;
-        }
-        return false;
+    function updateDebtAndBalances(
+        Group storage group,
+        address from,
+        address to,
+        uint256 amount
+    ) internal {
+        updateDebtsGraph(group.debts, from, to, amount);
+        group.balances[from] -= int256(amount);
+        group.balances[to] += int256(amount);
     }
 
     function updateDebtsGraph(
@@ -211,16 +222,12 @@ library ExpenseHandler {
         uint256 amount
     ) private {
         //exist the inverse arch? is already present an arch in the other direction
-        uint256 inverseDebs = debs[to][from];
-        if (inverseDebs > 0) {
-            if (inverseDebs >= amount) {
-                debs[to][from] -= amount;
-            } else {
-                debs[from][to] = amount - inverseDebs;
-                debs[to][from] = 0;
-            }
+        if (debs[to][from] >= amount) {
+            debs[to][from] -= amount;
         } else {
-            debs[from][to] += amount;
+            uint256 residual = amount - debs[to][from];
+            debs[to][from] = 0;
+            debs[from][to] += residual;
         }
     }
 }

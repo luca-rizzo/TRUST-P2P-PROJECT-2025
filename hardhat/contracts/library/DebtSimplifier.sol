@@ -10,6 +10,10 @@ using EnumerableSet for EnumerableSet.AddressSet;
 
 library DebtSimplifier {
 
+    event DebtSimplified(
+        uint256 indexed groupId
+    );
+
     function simplifyDebt(Group storage group) internal {
         // To work in memory and simplify future steps, both 'debitors' and 'creditors' arrays are preallocated with the full number of group members.
         // Only the first 'debtSize' and 'credSize' elements are actually used, since Solidity does not allow dynamic resizing (e.g. push) in memory arrays.
@@ -42,6 +46,7 @@ library DebtSimplifier {
                 correctLastElementPosition(creditors, credSize);
             }
         }
+        emit DebtSimplified(group.id);
     }
 
     function extractSortedCreditorsAndDebitors(

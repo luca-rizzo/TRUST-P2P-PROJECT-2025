@@ -14,16 +14,6 @@ struct Expense {
     uint256 timestamp;
 }
 
-event ExpenseRegistered(
-    uint256 indexed groupId,
-    uint256 indexed expenseId,
-    address indexed payer,
-    uint256 amount,
-    string description,
-    address[] splitWith,
-    uint256[] amountForEach
-);
-
 enum SplitMethod {
     EQUAL,
     EXACT,
