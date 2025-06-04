@@ -1,0 +1,13 @@
+<h3>Pending Join Requests</h3>
+<div>
+    <div *ngFor="let addr of pendingAddress" class="pending-user-entry">
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <img src="assets/account.png" alt="account-img" style="width: 25px; height: 25px;" />
+    <div style="display: flex; flex-direction: column;">
+      <div class="address" style="flex: 1;">{{ addr }}</div>
+    </div>
+    <button class="btn-accept" (click)="approveUser(addr)">Accept</button>
+  </div>
+</div>
+
+</div>

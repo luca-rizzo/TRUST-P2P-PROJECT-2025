@@ -1,6 +1,87 @@
+.activity-card {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1rem;
+  border-left: 4px solid transparent;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.01);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+
+    .card-icon {
+      font-size: 1.6rem;
+    }
+
+    .card-info {
+      flex: 1;
+
+      h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .card-date {
+        font-size: 0.85rem;
+        color: #6b7280;
+      }
+    }
+
+    .card-amount {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+  }
+
+  .card-meta {
+    font-size: 0.9rem;
+
+    p {
+      margin: 0.25rem 0;
+    }
+
+    ul {
+      margin: 0.5rem 0 0 1rem;
+      padding: 0;
+      list-style-type: disc;
+
+      li {
+        margin-bottom: 0.25rem;
+      }
+    }
+  }
+}
+
+.expense-card {
+  border-left-color: #2fa4a0;
+
+  .card-icon {
+    color: #2fa4a0;
+  }
+}
+
+.settlement-card {
+  border-left-color: orange;
+  height: 100px;
+
+  .card-icon {
+    color: orange;
+  }
+
+}
+
+
 .group-details-container {
   max-width: 1400px;
-  margin: 2rem auto;
+  margin-top: 1rem;
   padding: 1rem;
   font-family: 'Inter', sans-serif;
   display: flex;
@@ -173,19 +254,6 @@
             font-weight: bold;
           }
 
-          .btn-accept {
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-            padding: 0.4rem 0.8rem;
-            border-radius: 0.5rem;
-            font-size: 0.85rem;
-            cursor: pointer;
-
-            &:hover {
-              background-color: #2563eb;
-            }
-          }
         }
       }
     }
@@ -194,4 +262,8 @@
 
 .settle-debt-btn {
   background-color: orange;
+
+  &:hover {
+    background-color: rgb(189, 128, 14);
+  }
 }

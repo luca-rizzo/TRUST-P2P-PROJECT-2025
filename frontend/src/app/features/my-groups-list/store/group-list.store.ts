@@ -6,6 +6,7 @@ import { from, Observable, switchMap } from 'rxjs';
 import { GroupManagerContractService, GroupMetadata } from '../../shared/services/group-manager-contract.service';
 import { GroupViewStruct } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
 import { ToastrService } from 'ngx-toastr';
+import { BigNumberish } from 'ethers';
 
 interface GroupListState {
   groups: GroupViewStruct[];
@@ -32,7 +33,7 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
       return this.contractSevice.getAllMyGroups().pipe(
         tapResponse(
           (groups) => this.setGroups(groups),
-          (error: HttpErrorResponse) => this.patchState({ errorMessage: error.error })
+          (error: HttpErrorResponse) => this.handleError(error)
         )
       )
     })
@@ -45,11 +46,7 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
           (tx) => {
             this.toastr.success("Transaction submitted: waiting for confirmation on the network...")
           },
-          (error: HttpErrorResponse) => {
-            this.patchState({ errorMessage: error.error });
-            console.log(error)
-            this.toastr.error(error.error)
-          }
+          (error: HttpErrorResponse) => this.handleError(error)
         ),
         switchMap(tx => {
           return from(tx.wait()).pipe(
@@ -58,7 +55,7 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
                 this.refreshAllGroups();
                 this.toastr.success("New group created successfully!");
               },
-              (error: HttpErrorResponse) => this.patchState({ errorMessage: error.error })
+              (error: HttpErrorResponse) => this.handleError(error)
             ),
           );
         }
@@ -66,9 +63,37 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
     })
   ));
 
+  readonly requestToJoin = this.effect<BigNumberish>(groupId$ => groupId$.pipe(
+    switchMap((groupId) => {
+      return this.contractSevice.requestToJoinGroup(groupId).pipe(
+        tapResponse(
+          (tx) => {
+            this.toastr.success("Transaction submitted: waiting for confirmation on the network...")
+          },
+          (error: HttpErrorResponse) => this.handleError(error)
+        ),
+        switchMap(tx => {
+          return from(tx.wait()).pipe(
+            tapResponse(
+              (tx) => {
+                this.toastr.success("Request to join group sent successfully!");
+              },
+              (error: HttpErrorResponse) => this.handleError(error)
+            ),
+          );
+        }
+        ))
+    })));
+
   readonly setGroups = this.updater((state, groups: GroupViewStruct[]) => ({
     ...state,
     groups: groups
   }));
+
+handleError(error: any) {
+    console.log(error)
+    this.toastr.error(error.reason);
+  }
+
 
 }

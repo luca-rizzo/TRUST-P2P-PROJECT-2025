@@ -4,6 +4,7 @@ import "../struct/Expense.sol";
 import "../struct/Group.sol";
 
 library ExpenseHandler {
+    
     function registerExpense(
         Group storage group,
         string calldata description,

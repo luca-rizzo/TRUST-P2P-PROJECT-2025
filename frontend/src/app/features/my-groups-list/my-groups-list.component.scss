@@ -96,7 +96,7 @@
   margin-bottom: 1rem;
 
   .add-button {
-    background-color: #2fa4a0;
+    background-color: orange;
     color: white;
     font-size: 1.5rem;
     width: 2.5rem;
@@ -106,7 +106,7 @@
     cursor: pointer;
 
     &:hover {
-      background-color: #278c89;
+      background-color: rgb(186, 121, 0);
     }
   }
 }
@@ -126,7 +126,8 @@
   border-radius: 1rem;
   width: 90%;
   max-width: 600px;
-  height: 80vh;
+  height: auto;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -161,6 +162,7 @@
 
   input[type="text"],
   input[type="number"],
+  textarea,
   select {
     width: 100%;
     padding: 0.6rem;

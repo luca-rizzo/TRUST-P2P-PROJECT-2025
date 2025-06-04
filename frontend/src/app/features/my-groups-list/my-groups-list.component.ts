@@ -1,14 +1,15 @@
 import { Component, inject } from '@angular/core';
-import { GroupListServiceStore } from './store/group-list.service';
+import { GroupListServiceStore } from './store/group-list.store';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BigNumberish } from 'ethers';
 import { Router } from '@angular/router';
+import { JoinGroupComponent } from './join-group/join-group.component';
 
 @Component({
   selector: 'app-my-groups-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, JoinGroupComponent],
   providers: [GroupListServiceStore],
   templateUrl: './my-groups-list.component.html',
   styleUrl: './my-groups-list.component.scss'
@@ -16,6 +17,7 @@ import { Router } from '@angular/router';
 export class MyGroupsListComponent {
 
   showModal = false;
+  joinGroupModal = false;
   newGroupName = '';
   newGroupMembers = '';
 
@@ -46,6 +48,11 @@ export class MyGroupsListComponent {
     this.showModal = false;
     this.newGroupName = '';
     this.newGroupMembers = '';
+  }
+
+  joinGroup(groupId: BigNumberish) {
+    this.store.requestToJoin(groupId);
+    this.joinGroupModal = false;
   }
 
 }

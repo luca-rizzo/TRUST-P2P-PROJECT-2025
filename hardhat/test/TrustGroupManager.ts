@@ -7,7 +7,6 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 describe("TrustGroupManager", function () {
 
-
   async function deployManager() {
     const Token = await hre.ethers.getContractFactory("TrustToken");
     const token = await Token.deploy();
@@ -1306,23 +1305,25 @@ describe("TrustGroupManager", function () {
       return { groupManager: taskGroupManager, token: token, groupId: groupId, creator: creator, otherMembers: [member2, member3] };
     }
 
+    const parseAmount = (amount: any) => hre.ethers.parseUnits(amount.toString(), 18);
+
     describe("Correct settlement of an expense", function () {
 
       it("Should correctly settle a part of a debt when amount is less than debt", async function () {
         const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
-
-        await token.connect(Alice).approve(groupManager, 10);
-        await token.connect(Alice).buyToken({ value: hre.ethers.parseEther("10") });
-        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        
+        await token.connect(Alice).approve(groupManager, parseAmount(10));
+        await token.connect(Alice).buyToken({ value: parseAmount(10) });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
         await groupManager.connect(Alice)
-          .settleDebt(groupId, 2, Bob);
+          .settleDebt(groupId, parseAmount(2), Bob);
 
         expect(await groupManager.connect(Alice)
-          .groupDebtTo(groupId, Bob)).to.be.eq(2);
+          .groupDebtTo(groupId, Bob)).to.be.eq(parseAmount(2));
         expect(await groupManager.connect(Alice)
-          .getMyBalanceInGroup(groupId)).to.be.eq(-2);
+          .getMyBalanceInGroup(groupId)).to.be.eq(parseAmount(-2));
       });
 
       it("Should correctly delete a debt when amount is equal to debt", async function () {
@@ -1330,11 +1331,11 @@ describe("TrustGroupManager", function () {
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
-        await token.connect(Alice).approve(groupManager, 10);
-        await token.connect(Alice).buyToken({ value: hre.ethers.parseEther("10") });
-        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await token.connect(Alice).approve(groupManager, parseAmount(10));
+        await token.connect(Alice).buyToken({ value: parseAmount(10) });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
         await groupManager.connect(Alice)
-          .settleDebt(groupId, 4, Bob);
+          .settleDebt(groupId, parseAmount(4), Bob);
 
         expect(await groupManager.connect(Alice)
           .groupDebtTo(groupId, Bob)).to.be.eq(0);
@@ -1351,9 +1352,9 @@ describe("TrustGroupManager", function () {
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
-        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
         await expect(groupManager.connect(Alice)
-          .settleDebt(groupId, 5, Bob)).to.be.revertedWith(
+          .settleDebt(groupId, parseAmount(10), Bob)).to.be.revertedWith(
             "Debs are smaller than amount!"
           );
       });
@@ -1362,12 +1363,13 @@ describe("TrustGroupManager", function () {
         const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
-        await token.connect(Alice).approve(groupManager, 4);
-        await token.connect(Alice).buyToken({ value: hre.ethers.parseUnits("3", "wei") });
-        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await token.connect(Alice).approve(groupManager, parseAmount(10));
+        //now she has 3TT
+        await token.connect(Alice).buyToken({ value: parseAmount(0.03) });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
 
         await expect(groupManager.connect(Alice)
-          .settleDebt(groupId, 4, Bob)).to.be.revertedWith(
+          .settleDebt(groupId, parseAmount(4), Bob)).to.be.revertedWith(
             "Insufficient balance of token to settle the debs"
           );
       });
@@ -1376,12 +1378,12 @@ describe("TrustGroupManager", function () {
         const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
-        await token.connect(Alice).approve(groupManager, 1);
-        await token.connect(Alice).buyToken({ value: hre.ethers.parseEther("4") });
-        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", 8, [Bob, Alice], 0, []);
+        await token.connect(Alice).approve(groupManager, parseAmount(1));
+        await token.connect(Alice).buyToken({ value: parseAmount(4) });
+        await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
 
         await expect(groupManager.connect(Alice)
-          .settleDebt(groupId, 4, Bob)).to.be.revertedWith(
+          .settleDebt(groupId, parseAmount(4), Bob)).to.be.revertedWith(
             "Not enough allowance given to this contract"
           );
       });

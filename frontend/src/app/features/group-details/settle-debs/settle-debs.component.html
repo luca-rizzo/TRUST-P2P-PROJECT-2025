@@ -1,0 +1,27 @@
+<div class="modal-backdrop" *ngIf="visible">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>Partial Debt Repayment</h2>
+    </div>
+
+    <div class="modal-body">
+      <label for="creditor">Select a creditor:</label>
+      <select [(ngModel)]="selectedCreditor" (onchange)="handleCreditorChange()">
+        <option *ngFor="let node of currentUserDebts" [value]="node.to">
+          {{ node.to }} -> {{node.amount | formatBase18}}
+        </option>
+      </select>
+      
+
+      <label for="amount">Amount to repay in TT:</label>
+      <input type="number" [(ngModel)]="repaymentAmount" min="0" max="debtsToSelected" />
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="cancel" (click)="handleClose()">Close</button>
+      <button class="generic-button" (click)="handleSubmit()">Submit Repayment</button>
+    </div>
+  </div>
+</div>

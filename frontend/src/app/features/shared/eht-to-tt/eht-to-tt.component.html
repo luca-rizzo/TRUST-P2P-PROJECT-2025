@@ -1,0 +1,82 @@
+<ng-container *ngIf="viewData$ | async as viewData">
+  <div style="display: flex; gap: 10px; align-items: center;">
+
+    <p><strong>ETH:</strong> {{ viewData.eth | formatBase18 : '' }}</p>
+    <button class="generic-button" (click)="showModal()" style="display: flex; align-items: center; gap: 6px; padding: 5px;">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon-convert" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h13M8 7l5 5m-5-5l5-5M16 17H3m13 0l-5 5m5-5l-5-5" />
+      </svg>
+    </button>
+
+    <p><strong>TT:</strong> {{ viewData.tt | formatBase18 : '' }}</p>
+
+  </div>
+
+  <div class="modal-backdrop" *ngIf="modalVisible">
+    <div class="modal" (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="modal-header">
+        <h2>Convert ETH to TT</h2>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body">
+
+        <!-- Conversion Section -->
+        <div class="balance">
+          <p><strong>Current ETH:</strong> {{ viewData.eth | formatBase18 : 'ETH' }}</p>
+          <p><strong>Current Trust Token:</strong> {{ viewData.tt | formatBase18 : 'TT' }}</p>
+        </div>
+
+        <form (ngSubmit)="buyTT()" #convertForm="ngForm" class="form-content">
+          <label>Amount in ETH</label>
+          <input type="number" name="ethAmount" [(ngModel)]="ethToConvert" required min="0.0001" step="any"
+            placeholder="e.g. 0.01 ETH" />
+
+          <p style="margin-top: 0.5rem;">
+            You will receive:
+            <strong>{{ ethToConvert * viewData.rate | number:'1.2-2' }}</strong> TT
+          </p>
+
+          <!-- Buttons for conversion -->
+          <div class="modal-footer modal-actions" style="margin-top: 1rem;">
+            <button type="submit" form="convertForm" class="submit" [disabled]="!convertForm.valid || ethToConvert <= 0"
+              (click)="buyTT()">
+              Convert
+            </button>
+            <button type="button" class="cancel" (click)="closeModal()">Cancel</button>
+          </div>
+        </form>
+
+        <hr style="margin: 2rem 0;" />
+
+        <!-- Allowance Section -->
+        <div class="allowance-section">
+          <h3 style="margin-bottom: 0.6rem;">🛡️ Token Allowance</h3>
+
+          <p>
+            Current allowance:
+            <strong>{{ viewData.allowance | formatBase18 : 'TT' }}</strong>
+          </p>
+
+          <form (ngSubmit)="setNewAllowance()" #allowanceForm="ngForm" class="form-content mt-2">
+            <label>Give allowance to TrustGroupContract</label>
+            <input type="number" name="newAllowance" [(ngModel)]="newAllowance" required min="0" step="any"
+              placeholder="e.g. 100" />
+
+            <!-- Buttons for allowance -->
+            <div class="modal-footer modal-actions" style="margin-top: 1rem;">
+              <button type="submit" form="allowanceForm" class="submit" (click)="setNewAllowance()"
+                [disabled]="!allowanceForm.valid || newAllowance < 0">
+                Approve Allowance
+              </button>
+              <button type="button" class="cancel" (click)="closeModal()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-container>

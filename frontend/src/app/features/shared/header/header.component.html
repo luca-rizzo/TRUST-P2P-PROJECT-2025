@@ -5,10 +5,10 @@
       <img src="assets/logo.png" alt="Logo" />
       <span>TRUST</span>
     </div>
-
     <!-- Indirizzo a destra -->
-    <div class="app-header__address">
-      {{address$ | async}}
+    <div class="app-header__address" style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+      <p>{{address$ | async}}</p>
+      <app-eht-to-tt></app-eht-to-tt>
     </div>
   </div>
 </header>

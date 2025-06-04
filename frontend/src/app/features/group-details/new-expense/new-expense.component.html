@@ -1,4 +1,4 @@
-<div class="modal-backdrop" *ngIf="visible" (click)="close()">
+<div class="modal-backdrop" *ngIf="visible">
   <div class="modal" (click)="$event.stopPropagation()">
     <!-- Header fisso -->
     <div class="modal-header">
@@ -16,9 +16,9 @@
 
         <label>Split Method</label>
         <select name="method" [(ngModel)]="splitMethod" required>
-          <option [value]="SplitMethod.EQUAL">Equally divided between selected</option>
-          <option [value]="SplitMethod.EXACT">Set exact amount spent</option>
-          <option [value]="SplitMethod.PERCENTAGE">Set percentage of each</option>
+          <option [value]=SplitMethod.EQUAL>Equally divided between selected</option>
+          <option [value]=SplitMethod.EXACT>Set exact amount spent</option>
+          <option [value]=SplitMethod.PERCENTAGE>Set percentage of each</option>
         </select>
 
         <label>Participants</label>
@@ -34,7 +34,7 @@
                 type="number"
                 class="split-input"
                 (input)="onValueChange(member.toString(), $event)"
-                [placeholder]="splitMethod === SplitMethod.PERCENTAGE ? '%' : '$'"
+                [placeholder]="splitMethod === SplitMethod.PERCENTAGE ? '%' : '€'"
               />
               <hr class="split-separator" />
             </div>

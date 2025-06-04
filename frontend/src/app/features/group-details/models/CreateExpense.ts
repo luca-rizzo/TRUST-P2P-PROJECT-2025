@@ -1,6 +1,14 @@
 export enum SplitMethod {
-    EQUAL, EXACT, PERCENTAGE
+  EQUAL = 'EQUAL',
+  EXACT = 'EXACT',
+  PERCENTAGE = 'PERCENTAGE',
 }
+
+export const SplitMethodIndex: Record<SplitMethod, number> = {
+  [SplitMethod.EQUAL]: 0,
+  [SplitMethod.EXACT]: 1,
+  [SplitMethod.PERCENTAGE]: 2,
+};
 
 export interface CreateExpense {
     description: string,

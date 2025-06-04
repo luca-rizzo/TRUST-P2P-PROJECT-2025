@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { GroupListService } from './group-list.service';
+import { TrustTokenService } from './trust-token.service';
 
-describe('GroupListService', () => {
-  let service: GroupListService;
+describe('TrustTokenService', () => {
+  let service: TrustTokenService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(GroupListService);
+    service = TestBed.inject(TrustTokenService);
   });
 
   it('should be created', () => {

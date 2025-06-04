@@ -1,7 +1,10 @@
 <section class="group-list">
   <div class="header">
     <h1 class="title">My groups</h1>
-    <button class="add-button" (click)="showModal = true">+</button>
+    <div style="display: flex; justify-content: end; gap: 10px;">
+      <button class="generic-button" (click)="joinGroupModal = true">Join group</button>
+      <button class="add-button" (click)="showModal = true">+</button>
+    </div>
   </div>
 
   <div *ngFor="let group of groups$ | async" class="group-card">
@@ -52,3 +55,5 @@
   </div>
 
 </section>
+
+<app-join-group [showModal]="joinGroupModal" (closed)="joinGroupModal = false" (joinGroupSubmitted)="joinGroup($event)"></app-join-group>

@@ -65,7 +65,7 @@ export class NewExpenseComponent {
   private reset() {
     this.description = '';
     this.amount = null;
-    this.splitMethod = 0;
+    this.splitMethod = SplitMethod.EXACT;
     this.participantValues = {};
     this.selectedParticipants = [];
   }

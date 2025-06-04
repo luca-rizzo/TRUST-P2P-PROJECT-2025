@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { DebtNodeStruct } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
+import { FormatBase18Pipe } from '../../shared/utility.ts/format-base18.pipe';
 
 @Component({
   selector: 'app-debs',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormatBase18Pipe],
   templateUrl: './debs.component.html',
   styleUrl: './debs.component.scss'
 })

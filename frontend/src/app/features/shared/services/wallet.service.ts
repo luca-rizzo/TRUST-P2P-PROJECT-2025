@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { DEV_WALLET } from '../../../environments/dev-wallet';
-import { from, Observable, of } from 'rxjs';
+import { from, map, Observable, of } from 'rxjs';
 import { Injectable } from '@angular/core';
 
 
@@ -18,4 +18,7 @@ export class WalletService {
     this.address$ = of(this.wallet.address);
   }
 
+  public getEthAmount(): Observable<bigint> {
+    return from(this.provider.getBalance(this.wallet.address));
+  }
 }

@@ -4,6 +4,7 @@ import "./struct/Expense.sol";
 import "./struct/Group.sol";
 import "./struct/Debts.sol";
 import "./library/DebtSimplifier.sol";
+import "./library/DebtSettler.sol";
 import "./library/ExpenseHandler.sol";
 import "./library/GroupAccessControl.sol";
 import "./TrustToken.sol";
@@ -11,6 +12,7 @@ import "./TrustToken.sol";
 import "hardhat/console.sol";
 
 using DebtSimplifier for Group;
+using DebtSettler for Group;
 using ExpenseHandler for Group;
 using GroupAccessControl for Group;
 
@@ -164,22 +166,7 @@ contract TrustGroupManager {
             isMemberOfGroup(group, to),
             "You can not settle a debt for a user that does not belong to group"
         );
-        require(
-            group.debts[msg.sender][to] >= amount,
-            "Debs are smaller than amount!"
-        );
-        require(
-            token.balanceOf(msg.sender) >= amount,
-            "Insufficient balance of token to settle the debs"
-        );
-        require(
-            token.allowance(msg.sender, address(this)) >= amount,
-            "Not enough allowance given to this contract"
-        );
-        require(token.transferFrom(msg.sender, to, amount), "Transfer failed");
-        group.debts[msg.sender][to] -= amount;
-        group.balances[msg.sender] += int256(amount);
-        group.balances[to] -= int256(amount);
+        group.settleDebt(amount, to, token);
     }
 
     function registerExpenses(
