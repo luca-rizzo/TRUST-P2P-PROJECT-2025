@@ -3,8 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { ComponentStore } from '@ngrx/component-store';
 import { tapResponse } from '@ngrx/operators';
 import { distinctUntilChanged, filter, from, map, Observable, switchMap, tap, withLatestFrom } from 'rxjs';
-import { DebtSettledOutput, GroupManagerContractService, GroupMetadata } from '../../shared/services/group-manager-contract.service';
-import { DebtNodeStruct, DebtSettledEvent, ExpenseStruct, ExpenseStructOutput, GroupDetailsViewStruct, GroupViewStruct } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
+import { DebtSettledOutput, ExpenseRegisteredOutput, GroupManagerContractService, GroupMetadata } from '../../shared/services/group-manager-contract.service';
+import { DebtNodeStruct, DebtSettledEvent, GroupDetailsViewStruct, GroupViewStruct } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
 import { ToastrService } from 'ngx-toastr';
 import { CreateExpense } from '../models/CreateExpense';
 import { AddressLike, BigNumberish, ethers } from 'ethers';
@@ -16,6 +16,7 @@ interface GroupDetailsState {
   groupDetails: GroupDetailsViewStruct;
   groupDebts: DebtNodeStruct[];
   settlementEvents: DebtSettledOutput[];
+  expenseEvents: ExpenseRegisteredOutput[];
   errorMessage: string
 }
 
@@ -31,14 +32,17 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
       groupDetails: {} as GroupDetailsViewStruct,
       errorMessage: '',
       groupDebts: [],
-      settlementEvents: []
+      settlementEvents: [],
+      expenseEvents: []
     };
     super(initialState);
     this.listenGroupSettlements();
+    this.listenExpenseEvents();
   }
 
   readonly groupDetails$ = this.select(state => state.groupDetails);
   readonly settlementEvents$ = this.select(state => state.settlementEvents);
+  readonly expenseEvents$ = this.select(state => state.expenseEvents);
   readonly groupDebts$ = this.select(state => state.groupDebts);
   readonly errorMessage$ = this.select(state => state.errorMessage);
 
@@ -52,10 +56,24 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
     filter(group => !!group.id),
     distinctUntilChanged((prev, curr) => prev.id === curr.id),
     switchMap((group) => {
-      return this.contractSevice.getGroupSettlementEvents(group.id).pipe(
+      return this.contractSevice.getLiveGroupSettlementEvents(group.id).pipe(
         tapResponse(
           (settlementEvent: any) => {
             this.reloadAllGroupData(group.id);
+          },
+          (error: HttpErrorResponse) => this.handleError(error)
+        )
+      );
+    })));
+
+  readonly listenExpenseEvents = this.effect<void>(trigger$ => this.groupDetails$.pipe(
+    filter(group => !!group.id),
+    distinctUntilChanged((prev, curr) => prev.id === curr.id),
+    switchMap((group) => {
+      return this.contractSevice.getLiveGroupExpenseEvents(group.id).pipe(
+        tapResponse(
+          (expenseEvent: any) => {
+            this.loadExpenseEvents(group.id);
           },
           (error: HttpErrorResponse) => this.handleError(error)
         )
@@ -67,7 +85,6 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
       return this.contractSevice.getGroupDetails(id).pipe(
         tapResponse(
           (group) => {
-            group.expenses.sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
             this.patchState({
               groupDetails: group
             })
@@ -108,6 +125,21 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
     }
     )));
 
+  readonly loadExpenseEvents = this.effect<BigNumberish>(ids$ => ids$.pipe(
+    switchMap((id) => {
+      return this.contractSevice.getExpenseEvents(id).pipe(
+        tapResponse(
+          (expenseEvents) => {
+            this.patchState({
+              expenseEvents: expenseEvents
+            });
+          },
+          (error: HttpErrorResponse) => this.handleError(error)
+        )
+      )
+    }
+    )));
+
   readonly createExpense = this.effect<CreateExpense>(createExpense$ => createExpense$.pipe(
     withLatestFrom(this.groupDetails$),
     switchMap(([createExpense, groupDetails]) => {
@@ -122,8 +154,6 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
           return from(tx.wait()).pipe(
             tapResponse(
               (tx) => {
-                this.loadGroupDetails(groupDetails.id)
-                this.loadGroupDebts(groupDetails.id)
                 this.toastr.success("Expense created successfully!");
               },
               (error: HttpErrorResponse) => this.handleError(error)

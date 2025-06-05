@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { filter, from, fromEventPattern, map, merge, mergeMap, Observable, switchMap, tap, toArray } from 'rxjs';
-import { DebtSettledEvent, ExpenseShareStruct, ExpenseStruct, GroupDetailsViewStruct, TrustGroupManager } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
+import { DebtSettledEvent, ExpenseRegisteredEvent, GroupDetailsViewStruct, TrustGroupManager } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
 import { TrustGroupManager__factory } from '../../../../../../hardhat/typechain-types/factories/contracts/TrustGroupManager__factory';
 import { GROUP_MANAGER_CONTRACT } from '../../../environments/deployed-contracts';
 import { WalletService } from './wallet.service';
@@ -16,14 +16,18 @@ export interface GroupMetadata {
 }
 
 export type DebtSettledOutput = DebtSettledEvent.OutputObject & {
-  timestamp: number; 
+  timestamp: number;
+};
+
+export type ExpenseRegisteredOutput = ExpenseRegisteredEvent.OutputObject & {
+  timestamp: number;
 };
 
 @Injectable({
   providedIn: 'root'
 })
 export class GroupManagerContractService {
-  
+
 
   private contract: TrustGroupManager;
 
@@ -54,14 +58,24 @@ export class GroupManagerContractService {
     return from(this.contract.requestToJoin(id));
   }
 
-  public getGroupSettlementEvents(id: BigNumberish): Observable<DebtSettledEvent.OutputObject> {
+  public getLiveGroupSettlementEvents(id: BigNumberish): Observable<DebtSettledEvent.OutputObject> {
     console.log("Retrieving settlement events for group ID:", id);
     return createObservableFromEvent<DebtSettledEvent.OutputObject>(
-        'DebtSettled',
-        this.contract,
-        ['groupId', 'from', 'to', 'amount'],
-        (e: DebtSettledEvent.OutputObject) => e.groupId == id.valueOf() as bigint
-      )
+      'DebtSettled',
+      this.contract,
+      ['groupId', 'from', 'to', 'amount'],
+      (e: DebtSettledEvent.OutputObject) => e.groupId == id.valueOf() as bigint
+    )
+  }
+
+  public getLiveGroupExpenseEvents(id: BigNumberish): Observable<ExpenseRegisteredEvent.OutputObject> {
+    console.log("Retrieving expense events for group ID:", id);
+    return createObservableFromEvent<ExpenseRegisteredEvent.OutputObject>(
+      'ExpenseRegistered',
+      this.contract,
+      ['groupId', 'expenseId', 'payer', 'amount', 'description', 'splitWith', 'amountForEach'],
+      (e: ExpenseRegisteredEvent.OutputObject) => e.groupId == id.valueOf() as bigint
+    )
   }
 
   public getGroupDetails(id: BigNumberish) {
@@ -76,17 +90,6 @@ export class GroupManagerContractService {
           balances: Array.from(groupRaw.balances).map((b: any) => ({
             member: b.member,
             amount: b.amount
-          })),
-          expenses: Array.from(groupRaw.expenses).map((e: ExpenseStruct) => ({
-            id: e.id,
-            description: e.description,
-            timestamp: e.timestamp,
-            amount: e.amount,
-            paidBy: e.paidBy,
-            shares: Array.from(e.shares).map((s: ExpenseShareStruct) => ({
-              participant: s.participant,
-              amount: s.amount
-            }))
           }))
         };
       })
@@ -140,6 +143,36 @@ export class GroupManagerContractService {
                 from: event.args[1],
                 to: event.args[2],
                 amount: event.args[3],
+                timestamp: block?.timestamp || 0
+              }))
+            )
+          ),
+          toArray()
+        )
+      )
+    );
+  }
+
+  public getExpenseEvents(groupId: BigNumberish): Observable<ExpenseRegisteredOutput[]> {
+    return from(
+      this.contract.queryFilter(
+        this.contract.filters.ExpenseRegistered(groupId, undefined, undefined),
+        0,
+        'latest'
+      )
+    ).pipe(
+      mergeMap(events =>
+        from(events).pipe(
+          mergeMap(event =>
+            from(this.walletService.provider.getBlock(event.blockNumber)).pipe(
+              map(block => ({
+                groupId: event.args[0],
+                expenseId: event.args[1],
+                payer: event.args[2],
+                amount: event.args[3],
+                description: event.args[4],
+                splitWith: event.args[5],
+                amountForEach: event.args[6],
                 timestamp: block?.timestamp || 0
               }))
             )

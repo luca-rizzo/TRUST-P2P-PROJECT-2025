@@ -26,58 +26,63 @@
                     <h2>Expenses</h2>
                     <div style="display: flex; justify-content: flex-end; flex: 1; gap: 8px;">
                         <button class="generic-button" (click)="newExpenseModalOpen = true">Add Expense</button>
-                        <button *ngIf="showSettleDebtsButton$ | async"  class="generic-button settle-debt-btn" (click)="settleDebtsModalOpen = true">Settle
+                        <button *ngIf="showSettleDebtsButton$ | async" class="generic-button settle-debt-btn"
+                            (click)="settleDebtsModalOpen = true">Settle
                             debt</button>
                     </div>
                 </div>
-                <div *ngIf="group.expenses?.length === 0" class="placeholder">
-                    No expenses yet.
-                </div>
-                <div *ngFor="let entry of groupActivity$ | async">
-                    <!-- EXPENSE CARD -->
-                    <div *ngIf="entry.type === 'expense'" class="activity-card expense-card">
-                        <div class="card-header">
-                            <div class="card-icon">🧾</div>
-                            <div class="card-info">
-                                <h3>{{ entry.description }}</h3>
-                                <div class="card-date">
-                                    {{ Number(entry.timestamp) * 1000 | date: 'medium' }}
+                <ng-container *ngIf="groupActivity$ | async as groupActivity">
+                    <div *ngIf="groupActivity.length === 0" class="placeholder">
+                        No activity yet.
+                    </div>
+                    <div *ngFor="let entry of groupActivity">
+                        <!-- EXPENSE CARD -->
+                        <div *ngIf="entry.type === 'expense'" class="activity-card expense-card">
+                            <div class="card-header">
+                                <div class="card-icon">🧾</div>
+                                <div class="card-info">
+                                    <h3>{{ entry.description }}</h3>
+                                    <div class="card-date">
+                                        {{ Number(entry.timestamp) * 1000 | date: 'medium' }}
+                                    </div>
+                                </div>
+                                <div class="card-amount">
+                                    {{ entry.amount | formatBase18 : '€' }}
                                 </div>
                             </div>
-                            <div class="card-amount">
-                                {{ entry.amount | formatBase18 : '€' }}
+
+                            <div class="card-meta">
+                                <p>Paid by <strong>{{ entry.payer }}</strong></p>
+                                <p>Split with:</p>
+                                <ul>
+                                    <li *ngFor="let participant of entry.splitWith; let i = index">
+                                        {{ participant }} owes <strong>{{ entry.amountForEach[i] | formatBase18 :
+                                            '€'}}</strong>
+                                    </li>
+
+                                </ul>
                             </div>
                         </div>
 
-                        <div class="card-meta">
-                            <p>Paid by <strong>{{ entry.paidBy }}</strong></p>
-                            <p>Split with:</p>
-                            <ul>
-                                <li *ngFor="let s of entry.shares">
-                                    {{ s.participant }} owes <strong>{{ s.amount | formatBase18 : '€'}}</strong>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- SETTLEMENT CARD -->
-                    <div *ngIf="entry.type === 'settlement'" class="activity-card settlement-card">
-                        <div class="card-header">
-                            <div class="card-info">
-                                <div class="card-date">
-                                    {{ entry.timestamp * 1000 | date: 'medium' }}
+                        <!-- SETTLEMENT CARD -->
+                        <div *ngIf="entry.type === 'settlement'" class="activity-card settlement-card">
+                            <div class="card-header">
+                                <div class="card-info">
+                                    <div class="card-date">
+                                        {{ entry.timestamp * 1000 | date: 'medium' }}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="card-meta" style="display: flex; align-items: center;">
-                            <img src="assets/TT_token.png" style="height: 50px;" />
-                            <p><strong>{{ entry.from }}</strong> has settled <strong>{{ entry.amount | formatBase18:'TT'
-                                    }}</strong> to <strong>{{ entry.to }}</strong></p>
+                            <div class="card-meta" style="display: flex; align-items: center;">
+                                <img src="assets/TT_token.png" style="height: 50px;" />
+                                <p><strong>{{ entry.from }}</strong> has settled <strong>{{ entry.amount |
+                                        formatBase18:'TT'
+                                        }}</strong> to <strong>{{ entry.to }}</strong></p>
+                            </div>
                         </div>
                     </div>
-                </div>
-
+                </ng-container>
 
             </main>
 

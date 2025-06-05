@@ -35,6 +35,7 @@ export class GroupDetailsComponent {
   showDebsModal = false;
   groupDetails$ = this.groupDetailsStore.groupDetails$;
   groupSettlements$ = this.groupDetailsStore.settlementEvents$;
+  groupEvents$ = this.groupDetailsStore.expenseEvents$;
   groupDebts$ = this.groupDetailsStore.groupDebts$;
   errorMessage$ = this.groupDetailsStore.errorMessage$;
 
@@ -50,11 +51,11 @@ export class GroupDetailsComponent {
   );
 
   groupActivity$ = combineLatest([
-    this.groupDetails$,
+    this.groupEvents$,
     this.groupSettlements$
   ]).pipe(
-    map(([group, settlements]) => {
-      const expenses = group.expenses?.map(exp => ({
+    map(([exps, settlements]) => {
+      const expenses = exps?.map(exp => ({
         ...exp,
         type: 'expense' as const
       })) ?? [];
@@ -75,6 +76,7 @@ export class GroupDetailsComponent {
     this.groupDetailsStore.loadGroupDetails(Number(groupId));
     this.groupDetailsStore.loadGroupSettlement(Number(groupId));
     this.groupDetailsStore.loadGroupDebts(Number(groupId));
+    this.groupDetailsStore.loadExpenseEvents(Number(groupId));
   }
 
   isPositive(amount: BigNumberish): boolean {

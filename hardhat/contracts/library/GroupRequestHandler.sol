@@ -1,6 +1,5 @@
 pragma solidity ^0.8.28;
 
-import "../struct/Expense.sol";
 import "../struct/Group.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./GroupUtility.sol";

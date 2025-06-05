@@ -1,6 +1,6 @@
 pragma solidity ^0.8.28;
 
-import "../struct/Expense.sol";
+import "../struct/SplitMethod.sol";
 import "../struct/Group.sol";
 
 library ExpenseHandler {
@@ -50,48 +50,16 @@ library ExpenseHandler {
                 values
             );
         }
-        uint256 expenseId = saveExpense(
-            group,
-            description,
-            amount,
-            splitWith,
-            amountsForEach
-        );
 
         emit ExpenseRegistered(
             group.id,
-            expenseId,
+            group.nextExpenseId++,
             msg.sender,
             amount,
             description,
             splitWith,
             amountsForEach
         );
-    }
-
-    function saveExpense(
-        Group storage group,
-        string calldata description,
-        uint256 amount,
-        address[] calldata splitWith,
-        uint256[] memory amountsForEach
-    ) internal returns (uint256) {
-        uint256 expenseId = group.nextExpenseId++;
-        Expense storage expense = group.expenses.push();
-        expense.id = expenseId;
-        expense.description = description;
-        expense.amount = amount;
-        expense.paidBy = msg.sender;
-        expense.timestamp = block.timestamp;
-        for (uint i = 0; i < splitWith.length; i++) {
-            expense.shares.push(
-                ExpenseShare({
-                    participant: splitWith[i],
-                    amount: amountsForEach[i]
-                })
-            );
-        }
-        return expenseId;
     }
 
     function splitExpenseEqual(

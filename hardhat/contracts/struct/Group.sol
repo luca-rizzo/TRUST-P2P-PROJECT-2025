@@ -1,6 +1,5 @@
 pragma solidity ^0.8.28;
 
-import './Expense.sol';
 import './Balance.sol';
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
@@ -16,7 +15,6 @@ struct GroupDetailsView {
     address[] members;
     address[] requestsToJoin;
     Balance[] balances;
-    Expense[] expenses;
 }
 
 struct Group {
@@ -32,8 +30,6 @@ struct Group {
     EnumerableSet.AddressSet requestsToJoin;
     // Incremental counter for assigning unique IDs to expenses
     uint256 nextExpenseId;
-    // List of all expenses registered in the group
-    Expense[] expenses;
     // Directed debt graph: debts[from][to] = amount owed
     mapping(address => mapping(address => uint256)) debts;
     // Net balance of each member: positive if they are owed, negative if they owe

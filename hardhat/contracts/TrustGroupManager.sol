@@ -1,6 +1,6 @@
 pragma solidity ^0.8.28;
 import "hardhat/console.sol";
-import "./struct/Expense.sol";
+import "./struct/SplitMethod.sol";
 import "./struct/Group.sol";
 import "./struct/Debts.sol";
 import "./library/DebtSimplifier.sol";
@@ -63,8 +63,7 @@ contract TrustGroupManager {
                 name: group.name,
                 members: group.members.values(),
                 requestsToJoin: group.requestsToJoin.values(),
-                balances: balances,
-                expenses: group.expenses
+                balances: balances
             });
     }
 
