@@ -28,7 +28,7 @@ contract TrustGroupManager {
 
     TrustToken private token;
 
-    constructor(address tokenAddress) {
+    constructor(address payable tokenAddress) {
         token = TrustToken(tokenAddress);
     }
 

@@ -7,7 +7,8 @@
     "functional-test": "npx hardhat test ./test/TrustGroupManager.ts",
     "compile": "npx hardhat compile && npx hardhat typechain",
     "compile-and-start": "npx hardhat compile && npx hardhat node",
-    "local-deploy-trust-module": "npx hardhat ignition deploy ignition/modules/TrustModule.ts --network localhost",
+    "local-deploy": "npx hardhat ignition deploy ignition/modules/TrustModule.ts --network localhost",
+    "deploy-all-local": "concurrently -s first -n \"hardhatNode,hardhatIgnition\" -c \"green,blue\" \"npm run compile-and-start\" \"wait-on http://localhost:8545 && npm run local-deploy\"",
     "gas-used-report": "npx hardhat test ./test/GasUsage.ts"
   },
   "author": "luuukeeeee",
@@ -24,6 +25,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.15.16",
     "chai": "^4.3.7",
+    "concurrently": "^9.1.2",
     "dotenv": "^16.5.0",
     "ethers": "^6.14.3",
     "hardhat": "^2.24.0",
@@ -31,6 +33,7 @@
     "mocha": "^10.2.0",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "wait-on": "^8.0.3"
   }
 }

@@ -35,12 +35,14 @@ library GroupRequestHandler {
         newGroup.creator = msg.sender;
         for (uint256 i = 0; i < otherMembers.length; i++) {
             newGroup.members.add(otherMembers[i]);
-            groupsOfAddress[otherMembers[i]].push(groupId);
         }
         newGroup.members.add(msg.sender);
-        groupsOfAddress[msg.sender].push(groupId);
+        address[] memory members = newGroup.members.values();
+        for (uint i = 0; i < members.length; i++) {
+            groupsOfAddress[members[i]].push(groupId);
+        }
         newGroup.creationTimestamp = block.timestamp;
-        emit GroupCreated(groupId, name, msg.sender, newGroup.members.values());
+        emit GroupCreated(groupId, name, msg.sender, members);
     }
 
     function requestToJoin(Group storage group) internal {

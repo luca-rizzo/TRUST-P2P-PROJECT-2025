@@ -18,10 +18,22 @@ describe("Gas Measurement Tests", function () {
     return { token, manager, signers };
   }
 
-  function logGasReport(title: string, gasUsed: bigint, extra: Record<string, any>) {
+  function logGasReport(
+    title: string,
+    gasUsed: bigint,
+    extra: Record<string, any>
+  ) {
+    const gasPriceGwei = 5.36; // actual gas cost per Gwei
+    const ethPriceEur = 2590.59; // actual ETH/EUR
+
+    const gasPriceEth = Number(gasPriceGwei) * 1e-9; // Gwei to ETH
+    const totalEth = Number(gasUsed) * gasPriceEth;
+    const totalEur = totalEth * ethPriceEur;
+
     console.log(`[Gas Report] ${title}`, {
       ...extra,
-      gasUsed: gasUsed.toString()
+      gasUsed: gasUsed.toString(),
+      estimatedCostEUR: `${totalEur.toFixed(2)} €`,
     });
   }
 
@@ -315,7 +327,7 @@ describe("Gas Measurement Tests", function () {
     async function settleDebt(manager: TrustGroupManager, token: TrustToken, groupId: any, debitor: HardhatEthersSigner, creditor: HardhatEthersSigner, amount: bigint) {
       const amountParsed = parseAmount(amount);
       // Ensure debtor has enough balance: buy tokens if needed
-      await token.connect(debitor).buyTokens({value: amountParsed / 100n + 1n});
+      await token.connect(debitor).buyTokens({ value: amountParsed / 100n + 1n });
       // Approve the manager to spend tokens on behalf of the debtor
       await token.connect(debitor).approve(manager, amountParsed);
       const tx = await manager.connect(debitor).settleDebt(groupId, amountParsed, creditor.address);
