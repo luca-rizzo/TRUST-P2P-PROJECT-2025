@@ -17,6 +17,9 @@ const config: HardhatUserConfig = {
     gasPriceApi: `https://api.etherscan.io/api?module=proxy&action=eth_gasPrice&apikey=${process.env.ETHERSCAN_API_KEY}`,
     outputFile: 'gas-report.txt',
     noColors: true
+  },
+  typechain: {
+    target: "ethers-v6"
   }
 };
 

@@ -143,7 +143,7 @@ export class TTEthStore extends ComponentStore<CurrentAccountAmount> {
 
   handleError(error: any) {
     console.log(error)
-    this.toastr.error(error.reason);
+    this.toastr.error(error.reason ?? 'Internal error: retry later');
   }
 
 }

@@ -15,7 +15,7 @@
           <div *ngIf="node.edges.length === 0" class="no-debts">Has no debts</div>
           <ul *ngIf="node.edges.length > 0">
             <li *ngFor="let edge of node.edges">
-              <span class="amount">{{ edge.amount | formatBase18 }}</span>
+              <span class="amount">{{ edge.amount | formatBase18 :'€/TT' }}</span>
               <span class="text">to</span>
               <span class="creditor">{{ edge.to }}</span>
             </li>

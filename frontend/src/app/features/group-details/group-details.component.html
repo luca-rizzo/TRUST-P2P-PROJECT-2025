@@ -45,7 +45,7 @@
                                 </div>
                             </div>
                             <div class="card-amount">
-                                {{ entry.amount | formatBase18 }}
+                                {{ entry.amount | formatBase18 : '€' }}
                             </div>
                         </div>
 
@@ -54,7 +54,7 @@
                             <p>Split with:</p>
                             <ul>
                                 <li *ngFor="let s of entry.shares">
-                                    {{ s.participant }} owes <strong>{{ s.amount | formatBase18 }}</strong>
+                                    {{ s.participant }} owes <strong>{{ s.amount | formatBase18 : '€'}}</strong>
                                 </li>
                             </ul>
                         </div>
@@ -98,10 +98,10 @@
                                 <div style="display: flex; flex-direction: column;">
                                     <div class="address" style="flex: 1;">{{ b.member }}</div>
                                     <div *ngIf="isPositive(b.amount)" class="positive" style="margin-left: 10px;">
-                                        Should receive {{ b.amount | formatBase18 }}
+                                        Should receive {{ b.amount | formatBase18 :'€/TT' }}
                                     </div>
                                     <div *ngIf="isNegative(b.amount)" class="negative" style="margin-left: 10px;">
-                                        Should pay {{ b.amount | formatBase18 }}
+                                        Should pay {{ b.amount | formatBase18 :'€/TT'}}
                                     </div>
                                 </div>
                             </div>

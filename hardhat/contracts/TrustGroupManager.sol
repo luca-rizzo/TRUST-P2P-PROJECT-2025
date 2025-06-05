@@ -35,10 +35,10 @@ contract TrustGroupManager {
     function createGroup(
         string calldata name,
         address[] calldata otherMembers
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         uint groupId = ++nextGroupId;
         Group storage newGroup = groups[groupId];
-        newGroup.initializeGroup(name, groupId, otherMembers);
+        newGroup.initializeGroup(name, groupId, otherMembers, groupsOfAddress);
         return groupId;
     }
 

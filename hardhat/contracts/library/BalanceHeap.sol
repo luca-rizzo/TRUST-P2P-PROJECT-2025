@@ -20,8 +20,7 @@ library BalanceHeap {
     function initMaxHeap(
         uint256 maxElements
     ) internal pure returns (Heap memory) {
-        return
-            Heap({data: new Balance[](maxElements), size: 0, isMinHeap: false});
+        return Heap({data: new Balance[](maxElements), size: 0, isMinHeap: false});
     }
 
     function insert(Heap memory heap, Balance memory value) internal pure {

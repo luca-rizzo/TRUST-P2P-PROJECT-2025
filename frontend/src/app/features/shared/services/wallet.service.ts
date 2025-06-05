@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { ContractRunner, ethers } from 'ethers';
 import { DEV_WALLET } from '../../../environments/dev-wallet';
 import { from, map, Observable, of } from 'rxjs';
 import { Injectable } from '@angular/core';

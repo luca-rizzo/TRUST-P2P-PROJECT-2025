@@ -1,4 +1,4 @@
 export const DEV_WALLET = {
-  privateKey: '0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0',
+  privateKey: '0xc526ee95bf44d8fc405a158bb884d9d1238d99f0612e9f33d006bb0789009aaa',
   providerUrl: 'http://127.0.0.1:8545/'
 };

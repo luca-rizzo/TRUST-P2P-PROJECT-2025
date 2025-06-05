@@ -7,6 +7,7 @@ import { GROUP_MANAGER_CONTRACT } from '../../../environments/deployed-contracts
 import { from } from 'rxjs';
 
 import { parseToBase18 } from '../utility.ts/to_base_converter';
+import { ContractRunner, ethers } from 'ethers';
 @Injectable({
   providedIn: 'root'
 })
@@ -23,7 +24,7 @@ export class TrustTokenService {
 
   ethToTT(amount: number) {
     const value = parseToBase18(amount);
-    return from(this.contract.buyToken({ value }));
+    return from(this.contract.buyTokens({ value }));
   }
 
   getTTTokenBalance() {

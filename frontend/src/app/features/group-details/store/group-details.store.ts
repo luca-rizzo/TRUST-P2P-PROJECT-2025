@@ -210,6 +210,6 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
   handleError(error: any) {
     this.patchState({ errorMessage: error.reason });
     console.log(error)
-    this.toastr.error(error.reason);
+    this.toastr.error(error.reason ?? 'Internal error: retry later');
   }
 }

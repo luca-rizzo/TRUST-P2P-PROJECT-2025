@@ -1,55 +1,98 @@
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import hre from "hardhat";
+import hre, { ethers } from "hardhat";
+import { TrustGroupManager } from "../typechain-types/contracts/TrustGroupManager";
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
 describe("TrustGroupManager", function () {
 
-  async function deployManager() {
-    const Token = await hre.ethers.getContractFactory("TrustToken");
+  // Centralized deploy fixture
+  async function deployFixture() {
+    const Token = await ethers.getContractFactory("TrustToken");
     const token = await Token.deploy();
-    const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-    const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
 
-    return { groupManager: taskGroupManager };
+    const GroupManager = await ethers.getContractFactory("TrustGroupManager");
+    const manager = await GroupManager.deploy(await token.getAddress());
+
+    const signers: HardhatEthersSigner[] = await ethers.getSigners();
+
+    return { token, manager, signers };
   }
 
-  describe("Deployment", function () {
+  // Centralized group creation fixture
+  async function createGroupFixture(
+    groupName = "Spesa casa pisa",
+    memberIndexes = [1, 2],
+    creatorIndex = 0
+  ) {
+    const { token, manager, signers } = await loadFixture(deployFixture);
+    const creator = signers[creatorIndex];
+    const members = memberIndexes.map(i => signers[i].address);
 
-  });
+    // Ottieni il groupId senza scrivere
+    const groupId = await manager.connect(creator).createGroup.staticCall(
+      groupName,
+      members
+    );
+
+    // Esegui davvero la transazione
+    await manager.connect(creator).createGroup(
+      groupName,
+      members
+    );
+
+    return {
+      token,
+      groupManager: manager as TrustGroupManager,
+      groupId,
+      creator,
+      otherMembers: memberIndexes.map(i => signers[i]),
+      signers
+    };
+  }
+
+  async function createGroupOf4Fixture() {
+    const { token, groupManager, groupId, creator, otherMembers, signers } = await createGroupFixture(
+      "Spesa casa pisa",
+      [1, 2, 3], // Bob, Charlie, Alice
+      0          // Dave (il creator)
+    );
+    return {
+      token,
+      groupManager,
+      groupId,
+      Dave: creator,
+      Bob: otherMembers[0],
+      Charlie: otherMembers[1],
+      Alice: otherMembers[2],
+      signers
+    };
+  }
+
+  async function createGroupOf3Fixture() {
+    return createGroupFixture("Spesa casa pisa", [1, 2], 0);
+  }
+
+  async function deployManagerFixture() {
+    const { manager } = await loadFixture(deployFixture);
+    return { groupManager: manager as TrustGroupManager };
+  }
+
+  const parseAmount = (amount: any) => hre.ethers.parseUnits(amount.toString(), 18);
 
   describe("Group creation", function () {
-    async function createGroup() {
-      const Token = await hre.ethers.getContractFactory("TrustToken");
-      const token = await Token.deploy();
-      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-      const [creator, member2, member3] = await hre.ethers.getSigners();
-
-      // Simulazione: ottieni il groupId senza scrivere
-      const groupId = await taskGroupManager.connect(creator).createGroup.staticCall(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-
-      // Esegui davvero la transazione
-      await taskGroupManager.connect(creator).createGroup(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-      return { groupManager: taskGroupManager, groupId: groupId, creator: creator, otherMembers: [member2, member3] };
-    }
 
     describe("Correct creation of group", function () {
 
       it("Should create correctly the group with correct id", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
 
         expect(groupId).to.be.gt(0);
       });
 
       it("Every member can retrieve the group", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const group_by_first = await groupManager.connect(otherMembers[0]).retrieveGroup(groupId);
         const group_by_creator = await groupManager.connect(creator).retrieveGroup(groupId);
         const group_by_second = await groupManager.connect(otherMembers[1]).retrieveGroup(groupId);
@@ -59,18 +102,26 @@ describe("TrustGroupManager", function () {
         expect(group_by_second.name).to.equal("Spesa casa pisa");
       });
 
+      it("Every member can retrieve the group within the list of all groups", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
+        const groups_by_first = await groupManager.connect(otherMembers[0]).retrieveMyGroups();
+        const groups_by_creator = await groupManager.connect(creator).retrieveMyGroups();
+        const groups_by_second = await groupManager.connect(otherMembers[1]).retrieveMyGroups();
+
+        expect(groups_by_first[0].name).to.equal("Spesa casa pisa");
+        expect(groups_by_creator[0].name).to.equal("Spesa casa pisa");
+        expect(groups_by_second[0].name).to.equal("Spesa casa pisa");
+      });
+
       it("Should contain a member only once even if i pass him twice in otherMembers", async function () {
-        const Token = await hre.ethers.getContractFactory("TrustToken");
-        const token = await Token.deploy();
-        const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-        const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-        const [creator, member2, member3] = await hre.ethers.getSigners();
-        await taskGroupManager.connect(creator).createGroup(
+        const { token, manager, signers } = await loadFixture(deployFixture);
+        const [creator, member2, member3] = signers;
+        await manager.connect(creator).createGroup(
           "Spesa casa pisa",
           [member2.address, member3.address, member2.address, member2.address, member3.address]
         );
 
-        const group = await taskGroupManager.connect(creator).retrieveGroup(1);
+        const group = await manager.connect(creator).retrieveGroup(1);
 
         expect(group.members.length).to.be.eq(3);
         expect(group.members.some(a => a === creator.address)).to.be.true;
@@ -79,11 +130,8 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should contain creator only once even if i pass him in otherMembers", async function () {
-        const Token = await hre.ethers.getContractFactory("TrustToken");
-        const token = await Token.deploy();
-        const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-        const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-        const [creator, member2, member3] = await hre.ethers.getSigners();
+        const { token, manager: taskGroupManager, signers } = await loadFixture(deployFixture);
+        const [creator, member2, member3] = signers;
         await taskGroupManager.connect(creator).createGroup(
           "Spesa casa pisa",
           [member2.address, member3.address, creator]
@@ -101,7 +149,7 @@ describe("TrustGroupManager", function () {
 
     describe("Validations", function () {
       it("Should not be able to retrieve group if you are not member", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, groupId, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const externalMembers = (await hre.ethers.getSigners())[otherMembers.length + 1];
 
         await expect(groupManager.connect(externalMembers).retrieveGroup(groupId)).to.be.revertedWith(
@@ -110,7 +158,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to retrieve group if it does not exsist", async function () {
-        const { groupManager } = await loadFixture(deployManager);
+        const { groupManager } = await loadFixture(deployManagerFixture);
         const user = (await hre.ethers.getSigners())[0];
 
         await expect(groupManager.connect(user).retrieveGroup(3)).to.be.revertedWith(
@@ -122,11 +170,8 @@ describe("TrustGroupManager", function () {
 
     describe("Events", function () {
       it("Should emit an event on group creation", async function () {
-        const Token = await hre.ethers.getContractFactory("TrustToken");
-        const token = await Token.deploy();
-        const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-        const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-        const [creator, member2, member3] = await hre.ethers.getSigners();
+        const { token, manager: taskGroupManager, signers } = await loadFixture(deployFixture);
+        const [creator, member2, member3] = signers;
 
         await expect(taskGroupManager.connect(creator).createGroup(
           "Spesa casa pisa",
@@ -140,38 +185,17 @@ describe("TrustGroupManager", function () {
       });
     });
 
-
   });
 
 
   describe("Expenses creation handling", function () {
-    async function createGroup() {
-      const Token = await hre.ethers.getContractFactory("TrustToken");
-      const token = await Token.deploy();
-      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-      const [creator, member2, member3] = await hre.ethers.getSigners();
-
-      // Simulazione: ottieni il groupId senza scrivere
-      const groupId = await taskGroupManager.connect(creator).createGroup.staticCall(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-
-      // Esegui davvero la transazione
-      await taskGroupManager.connect(creator).createGroup(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-      return { groupManager: taskGroupManager, groupId: groupId, creator: creator, otherMembers: [member2, member3] };
-    }
 
     describe("Correct creation of expenses", function () {
 
       describe("Split EQUAL", function () {
 
         it("Should properly handle debs for one expenses splitted with one payer different than registrator", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 8, [firstMember], 0, []);
@@ -185,7 +209,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly register one expenses splitted with one payer different than registrator", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
 
@@ -204,7 +228,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for one expenses splitted with two payers different than registrator", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -217,7 +241,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for one expenses splitted with one payers different than registrator", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 8, [firstMember], 0, []);
@@ -227,7 +251,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for one expenses splitted with number of payers not multiple of expense", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -240,7 +264,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should create debt from debitor to the registrator for one expense splitted beetween the two", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = otherMembers[0];
           const expenseDebitor = otherMembers[1];
           await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 6, [expenseRegistator, expenseDebitor], 0, []);
@@ -252,7 +276,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should update balance of single debitor and registrator for one expense splitted beetween the two", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = otherMembers[0];
           const expenseDebitor = otherMembers[1];
           await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 6, [expenseRegistator, expenseDebitor], 0, []);
@@ -264,7 +288,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should create debts from the two debitors to the registrator for one expense splitted beetween the three", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const expenseDebitor1 = otherMembers[0];
           const expenseDebitor2 = otherMembers[1];
@@ -277,7 +301,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should update balance of two debitors and registrator for one expense splitted beetween the three", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const expenseDebitor1 = otherMembers[0];
           const expenseDebitor2 = otherMembers[1];
@@ -292,7 +316,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle balance for two expenses with payers one inverse of the other and equal amount", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 6, [firstMember, secondMember], 0, []);
@@ -305,7 +329,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle balance for two expenses with payers one inverse of the other and different amount", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 0, []);
@@ -318,7 +342,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and equal amount", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 6, [firstMember, secondMember], 0, []);
@@ -331,7 +355,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and different amount - first greater", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 0, []);
@@ -344,7 +368,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and different amount - second greater", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 0, []);
@@ -357,7 +381,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly accumulate debs for two expenses with same creator and debitor", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 0, []);
@@ -374,7 +398,7 @@ describe("TrustGroupManager", function () {
       describe("Split EXACT", function () {
 
         it("Should properly handle debs for one expenses splitted with two payers different than registrator", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -387,7 +411,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly register one expenses splitted with other two member", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -410,7 +434,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for one expenses splitted with one payers different than registrator", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 8, [firstMember], 1, [8]);
@@ -420,7 +444,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should create debt from debitor to the registrator for one expense splitted beetween the two", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = otherMembers[0];
           const expenseDebitor = otherMembers[1];
           await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 6, [expenseRegistator, expenseDebitor], 1, [5, 1]);
@@ -432,7 +456,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should update balance of single debitor and registrator for one expense splitted beetween the two", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = otherMembers[0];
           const expenseDebitor = otherMembers[1];
           await groupManager.connect(expenseRegistator).registerExpenses(groupId, "Paper", 6, [expenseRegistator, expenseDebitor], 1, [2, 4]);
@@ -444,7 +468,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should create debts from the two debitors to the registrator for one expense splitted beetween the three", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const expenseDebitor1 = otherMembers[0];
           const expenseDebitor2 = otherMembers[1];
@@ -457,7 +481,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should update balance of two debitors and registrator for one expense splitted beetween the three", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const expenseDebitor1 = otherMembers[0];
           const expenseDebitor2 = otherMembers[1];
@@ -472,7 +496,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle balance for two expenses with payers one inverse of the other and equal amount", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 6, [firstMember, secondMember], 1, [4, 2]);
@@ -485,7 +509,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and equal amount", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 1, [2, 6]);
@@ -498,7 +522,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and different amount - first greater", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 1, [2, 6]);
@@ -511,7 +535,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and different amount - second greater", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 6, [firstMember, secondMember], 1, [4, 2]);
@@ -524,7 +548,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly accumulate debs for two expenses with same creator and debitor", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 1, [6, 2]);
@@ -541,7 +565,7 @@ describe("TrustGroupManager", function () {
       describe("Split PERCENTAGE", function () {
 
         it("Should properly handle debs for one expenses splitted with two payers different than registrator", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -554,7 +578,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly register one expenses splitted with two member", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -576,7 +600,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for one expenses splitted with two payers different than registrator with remainder (round)", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -589,7 +613,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for one expenses splitted beetween 3 and with remainder", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const expenseRegistator = creator;
           const firstMember = otherMembers[0];
           const secondMember = otherMembers[1];
@@ -603,7 +627,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and equal amount", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 2, [20, 80]);
@@ -616,7 +640,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and different amount - first greater", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 8, [firstMember, secondMember], 2, [20, 80]);
@@ -629,7 +653,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly handle debs for two expenses with payers one inverse of the other and different amount - second greater", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 6, [firstMember, secondMember], 2, [20, 80]);
@@ -642,7 +666,7 @@ describe("TrustGroupManager", function () {
         });
 
         it("Should properly accumulate debs for two expenses with same creator and debitor", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
           const firstMember = creator;
           const secondMember = otherMembers[0];
           await groupManager.connect(firstMember).registerExpenses(groupId, "Paper", 6, [firstMember, secondMember], 2, [20, 80]);
@@ -657,7 +681,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Test with multiple expenses: Alice, Bob, Charlie", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
         const alice = creator;
         const bob = otherMembers[0];
         const charlie = otherMembers[1];
@@ -704,126 +728,153 @@ describe("TrustGroupManager", function () {
         expect(await groupManager.connect(charlie).getMyBalanceInGroup(groupId)).to.eq(0);
       });
 
-      describe("Validations", function () {
-        it("Should not be able to retrieve group if you are not member", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
-          const externalMembers = (await hre.ethers.getSigners())[otherMembers.length + 1];
+    });
 
-          await expect(groupManager.connect(externalMembers).retrieveGroup(groupId)).to.be.revertedWith(
-            "You are not member of this group"
-          );
-        });
+    describe("Validations", function () {
+      it("Should not be able to register an expense if you dont belong to group", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const externalUser = (await hre.ethers.getSigners())[10];
 
-        it("Should not be able to retrieve group if it does not exsist", async function () {
-          const { groupManager } = await loadFixture(deployManager);
-          const user = (await hre.ethers.getSigners())[0];
-
-          await expect(groupManager.connect(user).retrieveGroup(3)).to.be.revertedWith(
-            "You are not member of this group"
-          );
-        });
-
+        await expect(groupManager.connect(externalUser).registerExpenses(
+          groupId, "Dinner", 90,
+          [creator.address, otherMembers[0].address, otherMembers[1].address], 0,
+          []
+        )).to.be.revertedWith("You can not register an expense on a group you do not belong to");
       });
 
-      describe("Events", function () {
-        it("Should emit an event on expense registration EQUAL", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
-          const alice = creator;
-          const bob = otherMembers[0];
-          const charlie = otherMembers[1];
+      it("Should not be able to register an expense with split EXACT and sum different of amount", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
 
-          await expect(groupManager.connect(alice).registerExpenses(
-            groupId, "Dinner", 90,
-            [alice.address, bob.address, charlie.address], 0,
-            []
-          )).to.emit(groupManager, "ExpenseRegistered")
-            .withArgs(
-              groupId,
-              anyValue,
-              alice.address,
-              90,
-              "Dinner",
-              [alice.address, bob.address, charlie.address],
-              [30, 30, 30]
-            );
-        });
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 90,
+          [alice.address, otherMembers[0].address, otherMembers[1].address], 1,
+          [30, 20, 10]
+        )).to.be.revertedWith("Sum of all values should be equal to total amount");
+      });
 
-        it("Should emit an event on expense registration EXACT", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
-          const alice = creator;
-          const bob = otherMembers[0];
-          const charlie = otherMembers[1];
+      it("Should not be able to register an expense with split PERCENTAGE and sum different of 100", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
 
-          await expect(groupManager.connect(alice).registerExpenses(
-            groupId, "Dinner", 90,
-            [bob.address, charlie.address], 1,
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 90,
+          [alice.address, otherMembers[0].address, otherMembers[1].address], 2,
+          [30, 20, 10]
+        )).to.be.revertedWith("Sum of all values should be equal to 100%");
+      });
+
+      it("Should not be able to register an expense amount 0", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
+
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 0,
+          [alice.address, otherMembers[0].address, otherMembers[1].address], 0,
+          []
+        )).to.be.revertedWith("Amount must be greater than 0");
+      });
+
+      it("Should not be able to register an expense with split exact and length of values different of splitWith", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
+
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 90,
+          [alice.address, otherMembers[0].address, otherMembers[1].address], 1,
+          [30, 20] // Only two values, but three participants
+        )).to.be.revertedWith("Number of values passed should match the number of member to split with");
+      });
+
+      it("Should not be able to register an expense with split PERCENTAGE and length of values different of splitWith", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
+
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 90,
+          [alice.address, otherMembers[0].address, otherMembers[1].address], 1,
+          [50, 50] // Only two values, but three participants
+        )).to.be.revertedWith("Number of values passed should match the number of member to split with");
+      });
+
+
+    });
+
+    describe("Events", function () {
+      it("Should emit an event on expense registration EQUAL", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
+        const bob = otherMembers[0];
+        const charlie = otherMembers[1];
+
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 90,
+          [alice.address, bob.address, charlie.address], 0,
+          []
+        )).to.emit(groupManager, "ExpenseRegistered")
+          .withArgs(
+            groupId,
+            anyValue,
+            alice.address,
+            90,
+            "Dinner",
+            [alice.address, bob.address, charlie.address],
+            [30, 30, 30]
+          );
+      });
+
+      it("Should emit an event on expense registration EXACT", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
+        const bob = otherMembers[0];
+        const charlie = otherMembers[1];
+
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 90,
+          [bob.address, charlie.address], 1,
+          [20, 70]
+        )).to.emit(groupManager, "ExpenseRegistered")
+          .withArgs(
+            groupId,
+            anyValue,
+            alice.address,
+            90,
+            "Dinner",
+            [bob.address, charlie.address],
             [20, 70]
-          )).to.emit(groupManager, "ExpenseRegistered")
-            .withArgs(
-              groupId,
-              anyValue,
-              alice.address,
-              90,
-              "Dinner",
-              [bob.address, charlie.address],
-              [20, 70]
-            );
-        });
-
-        it("Should emit an event on expense registration PERCENTAGE", async function () {
-          const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
-          const alice = creator;
-          const bob = otherMembers[0];
-          const charlie = otherMembers[1];
-
-          await expect(groupManager.connect(alice).registerExpenses(
-            groupId, "Dinner", 60,
-            [bob.address, charlie.address], 2,
-            [30, 70]
-          )).to.emit(groupManager, "ExpenseRegistered")
-            .withArgs(
-              groupId,
-              anyValue,
-              alice.address,
-              60,
-              "Dinner",
-              [bob.address, charlie.address],
-              [18, 42]
-            );
-        });
+          );
       });
-    })
+
+      it("Should emit an event on expense registration PERCENTAGE", async function () {
+        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroupFixture);
+        const alice = creator;
+        const bob = otherMembers[0];
+        const charlie = otherMembers[1];
+
+        await expect(groupManager.connect(alice).registerExpenses(
+          groupId, "Dinner", 60,
+          [bob.address, charlie.address], 2,
+          [30, 70]
+        )).to.emit(groupManager, "ExpenseRegistered")
+          .withArgs(
+            groupId,
+            anyValue,
+            alice.address,
+            60,
+            "Dinner",
+            [bob.address, charlie.address],
+            [18, 42]
+          );
+      });
+    });
   });
 
   describe("Debt semplification", function () {
-    async function createGroupOf4() {
-      const Token = await hre.ethers.getContractFactory("TrustToken");
-      const token = await Token.deploy();
-      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-      const [Dave, Bob, Charlie, Alice] = await hre.ethers.getSigners();
-
-      // Simulazione: ottieni il groupId senza scrivere
-      const groupId = await taskGroupManager.connect(Dave).createGroup.staticCall(
-        "Spesa casa pisa",
-        [Bob, Charlie, Alice]
-      );
-
-      // Esegui davvero la transazione
-      await taskGroupManager.connect(Dave).createGroup(
-        "Spesa casa pisa",
-        [Bob, Charlie, Alice]
-      );
-      return {
-        groupManager: taskGroupManager, groupId: groupId,
-        Dave: Dave, Bob: Bob, Charlie: Charlie, Alice: Alice
-      };
-    }
 
     it("Should not change anything in case of single edge", async function () {
-      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
 
-      ///recreate the situation of the assignment
+      const { token, groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4Fixture);
+
       await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
 
       expect(await groupManager.connect(Alice)
@@ -878,7 +929,7 @@ describe("TrustGroupManager", function () {
     });
 
     it("Should not change anything in the case of multiple incoming edges to the same node", async function () {
-      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4Fixture);
 
       ///recreate the situation of the assignment
       await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
@@ -936,7 +987,7 @@ describe("TrustGroupManager", function () {
     });
 
     it("Should not change anything in the case of multiple outgoing edges of the same node", async function () {
-      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4Fixture);
 
       ///recreate the situation of the assignment
       await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
@@ -1000,7 +1051,7 @@ describe("TrustGroupManager", function () {
       //B -> 10 -> C
       //OUT
       //A -> 20 -> C
-      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4Fixture);
 
       ///recreate the situation of the assignment
       await groupManager.connect(Bob).registerExpenses(groupId, "Beer", 10, [Alice], 0, []);
@@ -1064,7 +1115,7 @@ describe("TrustGroupManager", function () {
       //C -> 10 -> A
       //OUT
       //C -> 5 -> A
-      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4Fixture);
 
       ///recreate the situation of the assignment
       await groupManager.connect(Bob).registerExpenses(groupId, "Beer", 5, [Alice], 0, []);
@@ -1129,7 +1180,7 @@ describe("TrustGroupManager", function () {
       //D -> 5 -> A
       //OUT
       //
-      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4Fixture);
 
       ///recreate the situation of the assignment
       await groupManager.connect(Bob).registerExpenses(groupId, "Beer", 5, [Alice], 0, []);
@@ -1218,7 +1269,7 @@ describe("TrustGroupManager", function () {
     });
 
     it("Should simplify debts as described in the example of PDF", async function () {
-      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4);
+      const { groupManager, groupId, Dave, Bob, Charlie, Alice } = await loadFixture(createGroupOf4Fixture);
 
       ///recreate the situation of the assignment
       await groupManager.connect(Dave).registerExpenses(groupId, "Beer", 4, [Bob], 0, []);
@@ -1282,36 +1333,14 @@ describe("TrustGroupManager", function () {
   });
 
   describe("Expenses settling", function () {
-    async function createGroup() {
-      const Token = await hre.ethers.getContractFactory("TrustToken");
-      const token = await Token.deploy();
-      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-      const [creator, member2, member3] = await hre.ethers.getSigners();
-
-      // Simulazione: ottieni il groupId senza scrivere
-      const groupId = await taskGroupManager.connect(creator).createGroup.staticCall(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-
-      // Esegui davvero la transazione
-      await taskGroupManager.connect(creator).createGroup(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-      return { groupManager: taskGroupManager, token: token, groupId: groupId, creator: creator, otherMembers: [member2, member3] };
-    }
-
-    const parseAmount = (amount: any) => hre.ethers.parseUnits(amount.toString(), 18);
 
     describe("Correct settlement of an expense", function () {
 
       it("Should correctly settle a part of a debt when amount is less than debt", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
-        
+
         await token.connect(Alice).approve(groupManager, parseAmount(10));
         await token.connect(Alice).buyTokens({ value: parseAmount(10) });
         await groupManager.connect(Bob).registerExpenses(groupId, "Paper", parseAmount(8), [Bob, Alice], 0, []);
@@ -1325,7 +1354,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should correctly delete a debt when amount is equal to debt", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
@@ -1346,7 +1375,7 @@ describe("TrustGroupManager", function () {
     describe("Errors", function () {
 
       it("Should not be able to settle a debt if amount is 0", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
@@ -1358,7 +1387,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to settle a debt to yourself", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
@@ -1371,7 +1400,7 @@ describe("TrustGroupManager", function () {
 
 
       it("Should not be able to settle a debt if amount is grater than debt", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
@@ -1383,7 +1412,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to settle a debt if sender has not enough token", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
         await token.connect(Alice).approve(groupManager, parseAmount(10));
@@ -1398,7 +1427,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to settle a debt if allowance of sender to contract is less than amount", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
         await token.connect(Alice).approve(groupManager, parseAmount(1));
@@ -1417,31 +1446,11 @@ describe("TrustGroupManager", function () {
   });
 
   describe("Group joiner", function () {
-    async function createGroup() {
-      const Token = await hre.ethers.getContractFactory("TrustToken");
-      const token = await Token.deploy();
-      const GroupManagerFactory = await hre.ethers.getContractFactory("TrustGroupManager");
-      const taskGroupManager = await GroupManagerFactory.deploy(token.getAddress());
-      const [creator, member2, member3] = await hre.ethers.getSigners();
-
-      // Simulazione: ottieni il groupId senza scrivere
-      const groupId = await taskGroupManager.connect(creator).createGroup.staticCall(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-
-      // Esegui davvero la transazione
-      await taskGroupManager.connect(creator).createGroup(
-        "Spesa casa pisa",
-        [member2.address, member3.address]
-      );
-      return { groupManager: taskGroupManager, token: token, groupId: groupId, creator: creator, otherMembers: [member2, member3] };
-    }
 
     describe("Correct joining of a group", function () {
 
       it("Should correctly join a group after a member approve the user", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
         const Charlie = (await hre.ethers.getSigners())[4];
@@ -1455,7 +1464,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should be able to create a debt after joining the group", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
@@ -1475,7 +1484,7 @@ describe("TrustGroupManager", function () {
     describe("Errors", function () {
 
       it("Should not be able to request to join if already member of group", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
@@ -1487,7 +1496,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to request to join if he has already submitted a request", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
         const Charlie = (await hre.ethers.getSigners())[4];
@@ -1499,7 +1508,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to request to join if he has been approved in the group", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Bob = otherMembers[0];
         const Alice = otherMembers[1];
 
@@ -1513,7 +1522,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to approve a request if he does not belong to group", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Charlie = (await hre.ethers.getSigners())[4];
         const Frank = (await hre.ethers.getSigners())[5];
         await groupManager.connect(Charlie).requestToJoin(groupId);
@@ -1524,7 +1533,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should not be able to approve a request if the address did not request to enter in the group", async function () {
-        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Charlie = (await hre.ethers.getSigners())[4];
 
         await expect(groupManager.connect(creator).approveAddress(groupId, Charlie)).to.be.revertedWith(
@@ -1536,7 +1545,7 @@ describe("TrustGroupManager", function () {
 
     describe("Events", function () {
       it("Should emit an event when a user requests to join a group", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Charlie = (await hre.ethers.getSigners())[4];
 
         await expect(groupManager.connect(Charlie).requestToJoin(groupId))
@@ -1545,7 +1554,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should emit an event when a user is approved to join a group", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Alice = otherMembers[1];
         const Charlie = (await hre.ethers.getSigners())[4];
 
@@ -1556,7 +1565,7 @@ describe("TrustGroupManager", function () {
       });
 
       it("Should emit an event when a a request is rejected", async function () {
-        const { groupManager, groupId, creator, otherMembers } = await loadFixture(createGroup);
+        const { groupManager, token, groupId, creator, otherMembers } = await loadFixture(createGroupOf3Fixture);
         const Alice = otherMembers[1];
         const Charlie = (await hre.ethers.getSigners())[4];
 
@@ -1565,6 +1574,6 @@ describe("TrustGroupManager", function () {
           .to.emit(groupManager, "UserRejected")
           .withArgs(groupId, Charlie.address);
       });
-   });
+    });
   });
 });

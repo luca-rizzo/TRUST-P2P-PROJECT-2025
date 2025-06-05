@@ -1,27 +1,53 @@
 <div class="modal-backdrop" *ngIf="visible">
   <div class="modal" (click)="$event.stopPropagation()">
-
     <div class="modal-header">
       <h2>Partial Debt Repayment</h2>
     </div>
 
     <div class="modal-body">
       <label for="creditor">Select a creditor:</label>
-      <select [(ngModel)]="selectedCreditor" (onchange)="handleCreditorChange()">
+      <select id="creditor" [(ngModel)]="selectedCreditor" (ngModelChange)="handleCreditorChange()">
         <option *ngFor="let node of currentUserDebts" [value]="node.to">
-          {{ node.to }} -> {{node.amount | formatBase18}}
+          {{ node.to }} -> {{ node.amount | formatBase18:'TT' }}
         </option>
       </select>
-      
+
+      <!-- Visualizzazione relazione utente-creditore -->
+      <div class="repayment-visual" *ngIf="selectedCreditor">
+        <div class="user-block">
+          <img src="assets/account.png" />
+          <div class="address-label">You</div>
+        </div>
+
+        <div class="arrow-icon">→</div>
+
+        <div class="user-block">
+          <img src="assets/account.png" />
+          <div class="address-label">{{ selectedCreditor }}</div>
+        </div>
+      </div>
+
+      <div class="repayment-amount" *ngIf="selectedCreditor">
+        <span>Debt:</span>
+        <strong>{{ debtsToSelected | formatBase18:'€/TT' }}</strong>
+      </div>
 
       <label for="amount">Amount to repay in TT:</label>
-      <input type="number" [(ngModel)]="repaymentAmount" min="0" max="debtsToSelected" />
-
+      <input
+        type="number"
+        id="amount"
+        [(ngModel)]="repaymentAmount"
+        min="0"
+        [max]="debtsToSelected"
+        placeholder="Enter amount"
+      />
     </div>
 
     <div class="modal-footer">
       <button class="cancel" (click)="handleClose()">Close</button>
-      <button class="generic-button" (click)="handleSubmit()">Submit Repayment</button>
+      <button class="generic-button" (click)="handleSubmit()" [disabled]="!repaymentAmount || repaymentAmount <= 0">
+        Submit Repayment
+      </button>
     </div>
   </div>
 </div>
