@@ -310,4 +310,50 @@ describe("Gas Measurement Tests", function () {
 
   });
 
+  describe("Debt settling", function () {
+
+    async function settleDebt(manager: TrustGroupManager, token: TrustToken, groupId: any, debitor: HardhatEthersSigner, creditor: HardhatEthersSigner, amount: bigint) {
+      const amountParsed = parseAmount(amount);
+      // Ensure debtor has enough balance: buy tokens if needed
+      await token.connect(debitor).buyTokens({value: amountParsed / 100n + 1n});
+      // Approve the manager to spend tokens on behalf of the debtor
+      await token.connect(debitor).approve(manager, amountParsed);
+      const tx = await manager.connect(debitor).settleDebt(groupId, amountParsed, creditor.address);
+      const receipt = await tx.wait();
+      logGasReport("Debt settling", receipt?.gasUsed ?? 0n, {
+        debtor: debitor.address,
+        creditor: creditor.address,
+        groupId
+      });
+    }
+
+    it("Gas for settling debt with 2 members in expense", async function () {
+      const { token, manager, signers } = await deploy();
+      await createGroup(manager, signers[0], [signers[1], signers[2]]);
+      await registerExpense(manager, 1, signers[0], [signers[1], signers[2]], 90n, 0, []);
+      await settleDebt(manager, token, 1, signers[1], signers[0], 45n);
+    });
+
+    it("Gas for settling debt with 4 members in expense", async function () {
+      const { token, manager, signers } = await deploy();
+      await createGroup(manager, signers[0], signers.slice(0, 4));
+      await registerExpense(manager, 1, signers[0], signers.slice(0, 4), 120, 0, []);
+      await settleDebt(manager, token, 1, signers[1], signers[0], 30n);
+    });
+
+    it("Gas for settling debt with 8 members in expense", async function () {
+      const { token, manager, signers } = await deploy();
+      await createGroup(manager, signers[0], signers.slice(0, 8));
+      await registerExpense(manager, 1, signers[0], signers.slice(0, 8), 120, 0, []);
+      await settleDebt(manager, token, 1, signers[4], signers[0], 15n);
+    });
+
+    it("Gas for settling debt with huge expense", async function () {
+      const { token, manager, signers } = await deploy();
+      await createGroup(manager, signers[0], signers.slice(0, 8));
+      await registerExpense(manager, 1, signers[0], signers.slice(0, 8), 1000000n, 0, []);
+      await settleDebt(manager, token, 1, signers[4], signers[0], 125000n);
+    });
+  });
+
 });
