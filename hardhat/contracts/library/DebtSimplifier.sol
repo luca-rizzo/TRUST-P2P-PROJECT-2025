@@ -7,12 +7,8 @@ import "./BalanceHeap.sol";
 
 using EnumerableSet for EnumerableSet.AddressSet;
 
-
 library DebtSimplifier {
-
-    event DebtSimplified(
-        uint256 indexed groupId
-    );
+    event DebtSimplified(uint256 indexed groupId);
 
     function simplifyDebt(Group storage group) internal {
         // To work in memory and simplify future steps, we use two heaps:
@@ -21,7 +17,9 @@ library DebtSimplifier {
         // This allows efficient extraction of the largest creditor and debitor at each step.
         uint memberCount = group.members.length();
         BalanceHeap.Heap memory debitors = BalanceHeap.initMinHeap(memberCount);
-        BalanceHeap.Heap memory creditors = BalanceHeap.initMaxHeap(memberCount);
+        BalanceHeap.Heap memory creditors = BalanceHeap.initMaxHeap(
+            memberCount
+        );
 
         for (uint i = 0; i < memberCount; i++) {
             address member = group.members.at(i);
@@ -44,17 +42,25 @@ library DebtSimplifier {
             uint256 largestDebitorAmount = abs(largestDebitor.amount);
             uint256 minValue = min(largestCreditorAmount, largestDebitorAmount);
 
-            group.debts[largestDebitor.member][largestCreditor.member] = minValue;
+            group.debts[largestDebitor.member][
+                largestCreditor.member
+            ] = minValue;
 
             // positive amount means that previous largest creditor still needs to receive some money
             // instead negative amount means that previous largest debitor still needs to give some money
             int256 toAdjust = largestCreditor.amount + largestDebitor.amount;
             if (toAdjust < 0) {
                 // Debitor still owes money, push back with updated amount
-                BalanceHeap.insert(debitors, Balance(largestDebitor.member, toAdjust));
+                BalanceHeap.insert(
+                    debitors,
+                    Balance(largestDebitor.member, toAdjust)
+                );
             } else if (largestDebitorAmount < largestCreditorAmount) {
                 // Creditor still needs to receive money, push back with updated amount
-                BalanceHeap.insert(creditors, Balance(largestCreditor.member, toAdjust));
+                BalanceHeap.insert(
+                    creditors,
+                    Balance(largestCreditor.member, toAdjust)
+                );
             }
         }
         emit DebtSimplified(group.id);
@@ -73,8 +79,8 @@ library DebtSimplifier {
         uint memberCount = members.length();
         for (uint i = 0; i < memberCount; i++) {
             for (uint j = i + 1; j < memberCount; j++) {
-                group.debts[members.at(i)][members.at(j)] = 0;
-                group.debts[members.at(j)][members.at(i)] = 0;
+                delete group.debts[members.at(i)][members.at(j)];
+                delete group.debts[members.at(j)][members.at(i)];
             }
         }
     }

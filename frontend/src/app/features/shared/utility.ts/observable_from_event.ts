@@ -1,6 +1,6 @@
 import { BaseContract } from 'ethers';
 import { fromEventPattern, Observable } from 'rxjs';
-import { map, filter } from 'rxjs/operators';
+import { map, filter, skip } from 'rxjs/operators';
 
 /**
  * Crea uno stream osservabile tipizzato per un evento del contratto,

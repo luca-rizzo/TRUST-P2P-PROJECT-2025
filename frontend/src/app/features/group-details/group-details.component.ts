@@ -13,6 +13,7 @@ import { combineLatest, map } from 'rxjs';
 import { SettleDebt } from './models/SettleDebt';
 import { FormatBase18Pipe } from '../shared/utility.ts/format-base18.pipe';
 import { PendingJoinReqComponent } from './pending-join-req/pending-join-req.component';
+import { ExpenseRegisteredOutput } from '../shared/services/group-manager-contract.service';
 
 
 @Component({
@@ -35,7 +36,7 @@ export class GroupDetailsComponent {
   showDebsModal = false;
   groupDetails$ = this.groupDetailsStore.groupDetails$;
   groupSettlements$ = this.groupDetailsStore.settlementEvents$;
-  groupEvents$ = this.groupDetailsStore.expenseEvents$;
+  groupExpenseEvents$ = this.groupDetailsStore.expenseEvents$;
   groupDebts$ = this.groupDetailsStore.groupDebts$;
   errorMessage$ = this.groupDetailsStore.errorMessage$;
 
@@ -51,11 +52,11 @@ export class GroupDetailsComponent {
   );
 
   groupActivity$ = combineLatest([
-    this.groupEvents$,
+    this.groupExpenseEvents$,
     this.groupSettlements$
   ]).pipe(
     map(([exps, settlements]) => {
-      const expenses = exps?.map(exp => ({
+      const expenses = exps?.map((exp: ExpenseRegisteredOutput) => ({
         ...exp,
         type: 'expense' as const
       })) ?? [];

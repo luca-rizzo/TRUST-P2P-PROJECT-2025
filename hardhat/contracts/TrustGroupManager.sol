@@ -24,7 +24,6 @@ contract TrustGroupManager {
     
     uint256 public nextGroupId;
     mapping(uint256 => Group) private groups;
-    mapping(address => uint256[]) private groupsOfAddress;
 
     TrustToken private token;
 
@@ -38,7 +37,7 @@ contract TrustGroupManager {
     ) external returns (uint256) {
         uint groupId = ++nextGroupId;
         Group storage newGroup = groups[groupId];
-        newGroup.initializeGroup(name, groupId, otherMembers, groupsOfAddress);
+        newGroup.initializeGroup(name, groupId, otherMembers);
         return groupId;
     }
 
@@ -100,20 +99,6 @@ contract TrustGroupManager {
         return debts;
     }
 
-    function retrieveMyGroups() external view returns (GroupView[] memory) {
-        address user = msg.sender;
-        uint256[] storage groupIds = groupsOfAddress[user];
-        GroupView[] memory toReturn = new GroupView[](groupIds.length);
-        for (uint i = 0; i < groupIds.length; i++) {
-            Group storage group = groups[groupIds[i]];
-            toReturn[i] = GroupView({
-                id: group.id,
-                name: group.name,
-                members: group.members.values()
-            });
-        }
-        return toReturn;
-    }
 
     function requestToJoin(uint256 group_id) external {
         Group storage group = groups[group_id];
@@ -125,7 +110,6 @@ contract TrustGroupManager {
         Group storage group = groups[group_id];
         require(group.id != 0);
         group.approveRequest(userToApprove);
-        groupsOfAddress[userToApprove].push(group.id);
     }
 
     function rejectAddress(uint256 group_id, address userToReject) external {

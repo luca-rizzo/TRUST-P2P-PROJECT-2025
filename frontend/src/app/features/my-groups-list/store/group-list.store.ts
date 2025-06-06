@@ -4,12 +4,12 @@ import { ComponentStore } from '@ngrx/component-store';
 import { tapResponse } from '@ngrx/operators';
 import { from, Observable, switchMap } from 'rxjs';
 import { GroupManagerContractService, GroupMetadata } from '../../shared/services/group-manager-contract.service';
-import { GroupViewStruct } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
 import { ToastrService } from 'ngx-toastr';
 import { BigNumberish } from 'ethers';
+import { GroupDetailsViewStruct } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
 
 interface GroupListState {
-  groups: GroupViewStruct[];
+  groups: GroupDetailsViewStruct[];
   errorMessage: ''
 }
 
@@ -85,7 +85,7 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
         ))
     })));
 
-  readonly setGroups = this.updater((state, groups: GroupViewStruct[]) => ({
+  readonly setGroups = this.updater((state, groups: GroupDetailsViewStruct[]) => ({
     ...state,
     groups: groups
   }));

@@ -51,30 +51,55 @@ export class GroupManagerContractService {
   }
 
   public getAllMyGroups() {
-    return from(this.contract.retrieveMyGroups());
+    return this.walletService.address$.pipe(
+      switchMap((address: string) =>
+        from(
+          this.contract.queryFilter(
+            this.contract.filters.UserApproved(undefined, address),
+            0,
+            'latest'
+          )
+        ).pipe(
+          mergeMap((events: Log[]) =>
+            from(events).pipe(
+              mergeMap((event: any) => 
+                this.getGroupDetails(event.args[0]).pipe(
+                  map(groupDetails => ({
+                    ...groupDetails,
+                    // puoi aggiungere altri campi se vuoi
+                  }))
+                )
+              ),
+              toArray()
+            )
+          )
+        )
+      )
+    );
+
   }
 
   public requestToJoinGroup(id: BigNumberish) {
     return from(this.contract.requestToJoin(id));
   }
 
-  public getLiveGroupSettlementEvents(id: BigNumberish): Observable<DebtSettledEvent.OutputObject> {
+  public getLiveGroupSettlementEvents(id: BigNumberish): Observable<DebtSettledOutput> {
     console.log("Retrieving settlement events for group ID:", id);
-    return createObservableFromEvent<DebtSettledEvent.OutputObject>(
+    return createObservableFromEvent<DebtSettledOutput>(
       'DebtSettled',
       this.contract,
       ['groupId', 'from', 'to', 'amount'],
-      (e: DebtSettledEvent.OutputObject) => e.groupId == id.valueOf() as bigint
+      (e: DebtSettledOutput) => e.groupId == id.valueOf() as bigint
     )
   }
 
-  public getLiveGroupExpenseEvents(id: BigNumberish): Observable<ExpenseRegisteredEvent.OutputObject> {
+  public getLiveGroupExpenseEvents(id: BigNumberish): Observable<ExpenseRegisteredOutput> {
     console.log("Retrieving expense events for group ID:", id);
-    return createObservableFromEvent<ExpenseRegisteredEvent.OutputObject>(
+    return createObservableFromEvent<ExpenseRegisteredOutput>(
       'ExpenseRegistered',
       this.contract,
       ['groupId', 'expenseId', 'payer', 'amount', 'description', 'splitWith', 'amountForEach'],
-      (e: ExpenseRegisteredEvent.OutputObject) => e.groupId == id.valueOf() as bigint
+      (e: ExpenseRegisteredOutput) => e.groupId == id.valueOf() as bigint
     )
   }
 

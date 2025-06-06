@@ -26,8 +26,7 @@ library GroupRequestHandler {
         Group storage newGroup,
         string calldata name,
         uint256 groupId,
-        address[] calldata otherMembers,
-        mapping(address => uint256[]) storage groupsOfAddress
+        address[] calldata otherMembers
     ) internal {
         newGroup.name = name;
         newGroup.id = groupId;
@@ -38,7 +37,7 @@ library GroupRequestHandler {
         newGroup.members.add(msg.sender);
         address[] memory members = newGroup.members.values();
         for (uint i = 0; i < members.length; i++) {
-            groupsOfAddress[members[i]].push(groupId);
+            emit UserApproved(groupId, members[i]);
         }
         newGroup.creationTimestamp = block.timestamp;
         emit GroupCreated(groupId, name, msg.sender, members);
