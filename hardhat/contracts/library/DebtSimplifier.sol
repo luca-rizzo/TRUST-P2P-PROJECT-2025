@@ -20,7 +20,8 @@ library DebtSimplifier {
         BalanceHeap.Heap memory creditors = BalanceHeap.initMaxHeap(
             memberCount
         );
-
+        // Populate the heaps with balances
+        // We iterate over all members and insert them into the appropriate heap
         for (uint i = 0; i < memberCount; i++) {
             address member = group.members.at(i);
             int256 balanceAmount = group.balances[member];
@@ -34,14 +35,14 @@ library DebtSimplifier {
         resetDebtGraph(group);
 
         while (creditors.size > 0 && debitors.size > 0) {
-            // Extract the largest creditor and debitor
+            // extract the largest creditor and debitor
             Balance memory largestCreditor = BalanceHeap.extractTop(creditors);
             Balance memory largestDebitor = BalanceHeap.extractTop(debitors);
 
             uint256 largestCreditorAmount = abs(largestCreditor.amount);
             uint256 largestDebitorAmount = abs(largestDebitor.amount);
             uint256 minValue = min(largestCreditorAmount, largestDebitorAmount);
-
+            // the largestDebitor should pay the largestCreditor the minimum between what they owe and what is owed
             group.debts[largestDebitor.member][
                 largestCreditor.member
             ] = minValue;
@@ -56,13 +57,14 @@ library DebtSimplifier {
                     Balance(largestDebitor.member, toAdjust)
                 );
             } else if (largestDebitorAmount < largestCreditorAmount) {
-                // Creditor still needs to receive money, push back with updated amount
+                // creditor still needs to receive money, push back with updated amount
                 BalanceHeap.insert(
                     creditors,
                     Balance(largestCreditor.member, toAdjust)
                 );
             }
         }
+        //emit the event for off-chain processing
         emit DebtSimplified(group.id);
     }
 
@@ -74,11 +76,14 @@ library DebtSimplifier {
         return a < b ? a : b;
     }
 
+    // resets the entire debt graph for the group by deleting all debts between every pair of members
     function resetDebtGraph(Group storage group) private {
         EnumerableSet.AddressSet storage members = group.members;
         uint memberCount = members.length();
+        // iterate over all unique pairs (i, j) where i != j
         for (uint i = 0; i < memberCount; i++) {
             for (uint j = i + 1; j < memberCount; j++) {
+                // remove debt in both directions between member i and member j
                 delete group.debts[members.at(i)][members.at(j)];
                 delete group.debts[members.at(j)][members.at(i)];
             }

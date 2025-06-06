@@ -23,8 +23,8 @@ describe("Gas Measurement Tests", function () {
     gasUsed: bigint,
     extra: Record<string, any>
   ) {
-    const gasPriceGwei = 5.36; // actual gas cost per Gwei
-    const ethPriceEur = 2590.59; // actual ETH/EUR
+    const gasPriceGwei = 1.79; // actual gas cost per Gwei
+    const ethPriceEur = 2154.25; // actual ETH/EUR
 
     const gasPriceEth = Number(gasPriceGwei) * 1e-9; // Gwei to ETH
     const totalEth = Number(gasUsed) * gasPriceEth;

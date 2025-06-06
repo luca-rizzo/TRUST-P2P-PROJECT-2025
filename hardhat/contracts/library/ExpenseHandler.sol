@@ -15,6 +15,7 @@ library ExpenseHandler {
         uint256[] amountForEach
     );
 
+    // registers an expense in the group and emits an event
     function registerExpense(
         Group storage group,
         string calldata description,
@@ -28,6 +29,7 @@ library ExpenseHandler {
             "You can not register an expense to split with no one"
         );
         uint256[] memory amountsForEach;
+        // choose the split method and calculate the amounts for each participant
         if (splitMethod == SplitMethod.EQUAL) {
             amountsForEach = splitExpenseEqual(
                 group,
@@ -51,6 +53,7 @@ library ExpenseHandler {
             );
         }
 
+        // emit the event with all expense details
         emit ExpenseRegistered(
             group.id,
             group.nextExpenseId++,
@@ -62,6 +65,7 @@ library ExpenseHandler {
         );
     }
 
+    // splits the expense equally among all participants
     function splitExpenseEqual(
         Group storage group,
         uint256 amount,
@@ -85,6 +89,7 @@ library ExpenseHandler {
         return amountForEach;
     }
 
+    // splits the expense using exact amounts for each participant
     function splitExpenseExact(
         Group storage group,
         uint256 amount,
@@ -107,6 +112,7 @@ library ExpenseHandler {
         return amountsForEach;
     }
 
+    // splits the expense using percentages for each participant
     function splitExpensePercentage(
         Group storage group,
         uint256 amount,
@@ -134,6 +140,7 @@ library ExpenseHandler {
         return valuesBorrowed;
     }
 
+    // converts percentages to actual values, rounding and adjusting for total
     function percentageToValue(
         uint256 amount,
         uint256[] calldata percentages
@@ -148,6 +155,7 @@ library ExpenseHandler {
             total += value;
             maxIndex = percentages[i] > percentages[maxIndex] ? i : maxIndex;
         }
+        // adjust the largest share if rounding caused a mismatch
         if (total > amount) {
             values[maxIndex] -= (total - amount);
         } else if (total < amount) {
@@ -156,11 +164,13 @@ library ExpenseHandler {
         return values;
     }
 
+    // divides x by y and rounds to the nearest integer
     function roundDiv(uint256 x, uint256 y) internal pure returns (uint256) {
         require(y != 0, "division by zero");
         return (x + y / 2) / y;
     }
 
+    // checks if the sum of values equals the expected total
     function sumValuesEqualTo(
         uint256 expected,
         uint256[] calldata values
@@ -172,6 +182,7 @@ library ExpenseHandler {
         return sum == expected;
     }
 
+    // updates the debt graph and balances for a transfer from 'from' to 'to'
     function updateDebtAndBalances(
         Group storage group,
         address from,
@@ -183,13 +194,14 @@ library ExpenseHandler {
         group.balances[to] += int256(amount);
     }
 
+    // updates the debts mapping, netting out mutual debts if present
     function updateDebtsGraph(
         mapping(address => mapping(address => uint256)) storage debs,
         address from,
         address to,
         uint256 amount
     ) private {
-        //exist the inverse arch? is already present an arch in the other direction
+        // if there is already a debt in the opposite direction, net it out
         if (debs[to][from] >= amount) {
             debs[to][from] -= amount;
         } else {

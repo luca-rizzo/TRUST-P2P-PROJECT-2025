@@ -1,0 +1,640 @@
+Compiled 2 Solidity files successfully (evm target: paris).
+
+
+  Gas Measurement Tests
+    Group creation
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  gasUsed: '304241',
+  estimatedCostEUR: '1.17 €'
+}
+      ✔ Gas for group creation with 2 members (114ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  gasUsed: '353618',
+  estimatedCostEUR: '1.36 €'
+}
+      ✔ Gas for group creation with 4 members (66ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  gasUsed: '546419',
+  estimatedCostEUR: '2.11 €'
+}
+      ✔ Gas for group creation with 8 members (48ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955',
+    '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f',
+    '0xa0Ee7A142d267C1f36714E4a8F75612F20a79720',
+    '0xBcd4042DE499D14e55001CcbB24a551F3b954096',
+    '0x71bE63f3384f5fb98995898A86B02Fb2426c5788',
+    '0xFABB0ac9d68B0B445fB7357272Ff202C5651694a',
+    '0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec',
+    '0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097',
+    '0xcd3B766CCDd6AE721141F452C550Ca635964ce71',
+    '0x2546BcD3c84621e976D8185a91A922aE77ECEc30',
+    '0xbDA5747bFD65F08deb54cb465eB87D40e51B197E',
+    '0xdD2FD4581271e230360230F9337D5c0430Bf44C0',
+    '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199'
+  ],
+  gasUsed: '1124811',
+  estimatedCostEUR: '4.34 €'
+}
+      ✔ Gas for group creation with 20 members (50ms)
+    Register expense
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  gasUsed: '304241',
+  estimatedCostEUR: '1.17 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 90,
+  splitType: 0,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  splits: [],
+  gasUsed: '183200',
+  estimatedCostEUR: '0.71 €'
+}
+      ✔ Gas for EQUAL split expense with 2 members (46ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65'
+  ],
+  gasUsed: '401818',
+  estimatedCostEUR: '1.55 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 90,
+  splitType: 0,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65'
+  ],
+  splits: [],
+  gasUsed: '285111',
+  estimatedCostEUR: '1.10 €'
+}
+      ✔ Gas for EQUAL split expense with 4 members (42ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955',
+    '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f'
+  ],
+  gasUsed: '594619',
+  estimatedCostEUR: '2.29 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 90,
+  splitType: 0,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955',
+    '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f'
+  ],
+  splits: [],
+  gasUsed: '488933',
+  estimatedCostEUR: '1.89 €'
+}
+      ✔ Gas for EQUAL split expense with 8 members (47ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  gasUsed: '304241',
+  estimatedCostEUR: '1.17 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 100,
+  splitType: 1,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
+  ],
+  splits: [ 50, 50 ],
+  gasUsed: '132962',
+  estimatedCostEUR: '0.51 €'
+}
+      ✔ Gas for EXACT split with 2 members (53ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  gasUsed: '353618',
+  estimatedCostEUR: '1.36 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 100,
+  splitType: 1,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  splits: [ 25, 25, 25, 25 ],
+  gasUsed: '235773',
+  estimatedCostEUR: '0.91 €'
+}
+      ✔ Gas for EXACT split with 4 members (55ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  gasUsed: '546419',
+  estimatedCostEUR: '2.11 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 120,
+  splitType: 1,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  splits: [
+    10, 10, 30, 10,
+    10, 10, 10, 30
+  ],
+  gasUsed: '441346',
+  estimatedCostEUR: '1.70 €'
+}
+      ✔ Gas for EXACT split with 8 members (58ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  gasUsed: '304241',
+  estimatedCostEUR: '1.17 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 100,
+  splitType: 2,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
+  ],
+  splits: [ 50, 50 ],
+  gasUsed: '135848',
+  estimatedCostEUR: '0.52 €'
+}
+      ✔ Gas for PERCENTAGE split with 2 members (72ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  gasUsed: '353618',
+  estimatedCostEUR: '1.36 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 100,
+  splitType: 2,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  splits: [ 25, 25, 25, 25 ],
+  gasUsed: '241321',
+  estimatedCostEUR: '0.93 €'
+}
+      ✔ Gas for PERCENTAGE split with 4 members (60ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  gasUsed: '546419',
+  estimatedCostEUR: '2.11 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 120,
+  splitType: 2,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  splits: [
+    10, 10, 30, 10,
+    10, 10, 10, 10
+  ],
+  gasUsed: '452280',
+  estimatedCostEUR: '1.74 €'
+}
+      ✔ Gas for PERCENTAGE split with 8 members (61ms)
+    Request to join and approve
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  gasUsed: '304241',
+  estimatedCostEUR: '1.17 €'
+}
+[Gas Report] Request to join {
+  requester: '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+  groupId: 1,
+  gasUsed: '95361',
+  estimatedCostEUR: '0.37 €'
+}
+[Gas Report] Approve address {
+  approver: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  approvedAddress: '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+  gasUsed: '80433',
+  estimatedCostEUR: '0.31 €'
+}
+      ✔ Gas for request to join with 2 members (72ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  gasUsed: '353618',
+  estimatedCostEUR: '1.36 €'
+}
+[Gas Report] Request to join {
+  requester: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+  groupId: 1,
+  gasUsed: '95361',
+  estimatedCostEUR: '0.37 €'
+}
+[Gas Report] Approve address {
+  approver: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  approvedAddress: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+  gasUsed: '80433',
+  estimatedCostEUR: '0.31 €'
+}
+      ✔ Gas for request to join with 4 members (78ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  gasUsed: '546419',
+  estimatedCostEUR: '2.11 €'
+}
+[Gas Report] Request to join {
+  requester: '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f',
+  groupId: 1,
+  gasUsed: '95361',
+  estimatedCostEUR: '0.37 €'
+}
+[Gas Report] Approve address {
+  approver: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  approvedAddress: '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f',
+  gasUsed: '80433',
+  estimatedCostEUR: '0.31 €'
+}
+      ✔ Gas for request to join with 8 members (64ms)
+    Debt simplification
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '96360',
+  estimatedCostEUR: '0.37 €'
+}
+      ✔ Gas for single edge (74ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '102431',
+  estimatedCostEUR: '0.39 €'
+}
+      ✔ Gas for multiple incoming edges to same node (75ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '108968',
+  estimatedCostEUR: '0.42 €'
+}
+      ✔ Gas for multiple outgoing edges of same node (148ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '95160',
+  estimatedCostEUR: '0.37 €'
+}
+      ✔ Gas for two outgoing edges into one (86ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '95160',
+  estimatedCostEUR: '0.37 €'
+}
+      ✔ Gas for cycle of three nodes with one zero balance (83ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '82944',
+  estimatedCostEUR: '0.32 €'
+}
+      ✔ Gas for cycle of four nodes all zero balance (70ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '129189',
+  estimatedCostEUR: '0.50 €'
+}
+      ✔ Gas for PDF example (73ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '1328498',
+  estimatedCostEUR: '5.12 €'
+}
+      ✔ Gas for complex case with 20 members and cyclic graph (158ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '1615972',
+  estimatedCostEUR: '6.23 €'
+}
+      ✔ Gas for 20 members, all-to-all debts (1506ms)
+[Gas Report] Debt simplification {
+  simplifier: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '238761',
+  estimatedCostEUR: '0.92 €'
+}
+      ✔ Gas for 8 members, random debts (78ms)
+    Debt settling
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  gasUsed: '304241',
+  estimatedCostEUR: '1.17 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 90n,
+  splitType: 0,
+  participants: [
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
+  ],
+  splits: [],
+  gasUsed: '180905',
+  estimatedCostEUR: '0.70 €'
+}
+[Gas Report] Debt settling {
+  debtor: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+  creditor: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '80029',
+  estimatedCostEUR: '0.31 €'
+}
+      ✔ Gas for settling debt with 2 members in expense (71ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  gasUsed: '353618',
+  estimatedCostEUR: '1.36 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 120,
+  splitType: 0,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+  ],
+  splits: [],
+  gasUsed: '234168',
+  estimatedCostEUR: '0.90 €'
+}
+[Gas Report] Debt settling {
+  debtor: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+  creditor: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '80029',
+  estimatedCostEUR: '0.31 €'
+}
+      ✔ Gas for settling debt with 4 members in expense (52ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  gasUsed: '546419',
+  estimatedCostEUR: '2.11 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 120,
+  splitType: 0,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  splits: [],
+  gasUsed: '437989',
+  estimatedCostEUR: '1.69 €'
+}
+[Gas Report] Debt settling {
+  debtor: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+  creditor: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '80017',
+  estimatedCostEUR: '0.31 €'
+}
+      ✔ Gas for settling debt with 8 members in expense (58ms)
+[Gas Report] Group creation {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  members: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  gasUsed: '546419',
+  estimatedCostEUR: '2.11 €'
+}
+[Gas Report] Expense registration {
+  creator: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  amount: 1000000n,
+  splitType: 0,
+  participants: [
+    '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+    '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+    '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
+    '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+    '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+  ],
+  splits: [],
+  gasUsed: '437989',
+  estimatedCostEUR: '1.69 €'
+}
+[Gas Report] Debt settling {
+  debtor: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
+  creditor: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  groupId: 1,
+  gasUsed: '80041',
+  estimatedCostEUR: '0.31 €'
+}
+      ✔ Gas for settling debt with huge expense (67ms)
+
+
+  30 passing (4s)
+

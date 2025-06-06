@@ -19,14 +19,17 @@ library DebtSettler {
         address to,
         TrustToken token
     ) internal {
+        // Check that the debt exists and is enough to cover the amount
         require(
             group.debts[msg.sender][to] >= amount,
             "Debts are smaller than amount!"
         );
+        // Check that the sender has enough tokens
         require(
             token.balanceOf(msg.sender) >= amount,
             "Insufficient balance of token to settle the debs"
         );
+        // Check that the contract is allowed to transfer the tokens
         require(
             token.allowance(msg.sender, address(this)) >= amount,
             "Not enough allowance given to this contract"
@@ -36,7 +39,9 @@ library DebtSettler {
         group.debts[msg.sender][to] -= amount;
         group.balances[msg.sender] += int256(amount);
         group.balances[to] -= int256(amount);
+        // Transfer tokens from sender to recipient
         require(token.transferFrom(msg.sender, to, amount), "Transfer failed");
+        // Emit event for off-chain tracking
         emit DebtSettled(group.id, msg.sender, to, amount);
     }
 }
