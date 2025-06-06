@@ -9,7 +9,7 @@
     "compile-and-start": "npx hardhat compile && npx hardhat node",
     "local-deploy": "npx hardhat ignition deploy ignition/modules/TrustModule.ts --network localhost",
     "deploy-all-local": "concurrently -s first -n \"hardhatNode,hardhatIgnition\" -c \"green,blue\" \"npm run compile-and-start\" \"wait-on http://localhost:8545 && npm run local-deploy\"",
-    "gas-used-report": "npx hardhat test ./test/GasUsage.ts"
+    "gas-used-report": "npx hardhat test ./test/GasUsage.ts > log-gas-report.txt"
   },
   "author": "luuukeeeee",
   "license": "ISC",
