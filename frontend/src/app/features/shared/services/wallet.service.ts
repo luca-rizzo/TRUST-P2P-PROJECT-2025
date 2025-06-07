@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ethers } from 'ethers';
-import { defer, from, of, switchMap, BehaviorSubject, Observable, shareReplay, filter } from 'rxjs';
+import { defer, from, of, switchMap, BehaviorSubject, Observable, shareReplay, filter, tap } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
 declare global {

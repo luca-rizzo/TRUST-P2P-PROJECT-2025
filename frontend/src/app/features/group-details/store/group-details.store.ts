@@ -10,6 +10,7 @@ import { CreateExpense } from '../models/CreateExpense';
 import { AddressLike, BigNumberish, ethers } from 'ethers';
 import { TrustTokenService } from '../../shared/services/trust-token.service';
 import { SettleDebt } from '../models/SettleDebt';
+import { LoaderService } from '../../shared/services/loader.service';
 
 
 interface GroupDetailsState {
@@ -26,6 +27,8 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
   private contractSevice: GroupManagerContractService = inject(GroupManagerContractService);
   private tokenSevice: TrustTokenService = inject(TrustTokenService);
   private toastr: ToastrService = inject(ToastrService);
+  private loader = inject(LoaderService);
+
 
   constructor() {
     const initialState: GroupDetailsState = {
@@ -103,6 +106,7 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
   );
 
   readonly loadGroupDetails = this.effect<BigNumberish>(ids$ => ids$.pipe(
+    tap(() => this.loader.show()),
     switchMap((id) => {
       return this.contractSevice.getGroupDetails(id).pipe(
         tapResponse(
@@ -114,10 +118,12 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
           (error: HttpErrorResponse) => this.handleError(error)
         )
       )
-    })
+    }),
+    tap(() => this.loader.hide())
   ));
 
   readonly loadGroupDebts = this.effect<BigNumberish>(ids$ => ids$.pipe(
+    tap(() => this.loader.show()),
     switchMap((id) => {
       return this.contractSevice.getGroupDebts(id).pipe(
         tapResponse(
@@ -129,10 +135,12 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
           (error: HttpErrorResponse) => this.handleError(error)
         )
       )
-    })
+    }),
+    tap(() => this.loader.hide())
   ));
 
   readonly loadGroupSettlement = this.effect<BigNumberish>(ids$ => ids$.pipe(
+    tap(() => this.loader.show()),
     switchMap((id) => {
       return this.contractSevice.getSettlementEvents(id).pipe(
         tapResponse(
@@ -145,9 +153,11 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
         )
       )
     }
-    )));
+    ),
+    tap(() => this.loader.hide())));
 
   readonly loadExpenseEvents = this.effect<BigNumberish>(ids$ => ids$.pipe(
+    tap(() => this.loader.show()),
     switchMap((id) => {
       return this.contractSevice.getExpenseEvents(id).pipe(
         tapResponse(
@@ -159,8 +169,9 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
           (error: HttpErrorResponse) => this.handleError(error)
         )
       )
-    }
-    )));
+    }),
+    tap(() => this.loader.hide())
+  ));
 
   readonly createExpense = this.effect<CreateExpense>(createExpense$ => createExpense$.pipe(
     withLatestFrom(this.groupDetails$),
@@ -172,8 +183,9 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
           },
           (error: HttpErrorResponse) => this.handleError(error)
         ),
-    )}
-  )));
+      )
+    }
+    )));
 
   readonly simplifyDebts = this.effect<void>(trigger$ => trigger$.pipe(
     withLatestFrom(this.groupDetails$),

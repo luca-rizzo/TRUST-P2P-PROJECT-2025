@@ -25,7 +25,7 @@ export class TrustTokenService {
     switchMap(wallet => {
       const contract = TrustToken__factory.connect(this.trustTokenAddress, wallet);
       return of(contract);
-    })
+    }),
   );
 
   TTBalance$ = combineLatest([this.contract$, this.walletService.address$]).pipe(

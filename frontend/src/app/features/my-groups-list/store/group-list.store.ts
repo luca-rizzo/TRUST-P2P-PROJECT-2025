@@ -2,11 +2,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { ComponentStore } from '@ngrx/component-store';
 import { tapResponse } from '@ngrx/operators';
-import { from, Observable, switchMap, tap } from 'rxjs';
+import { finalize, from, Observable, switchMap, tap } from 'rxjs';
 import { GroupManagerContractService, GroupMetadata } from '../../shared/services/group-manager-contract.service';
 import { ToastrService } from 'ngx-toastr';
 import { BigNumberish } from 'ethers';
 import { GroupDetailsViewStruct } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
+import { LoaderService } from '../../shared/services/loader.service';
 
 interface GroupListState {
   groups: GroupDetailsViewStruct[];
@@ -18,6 +19,7 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
 
   private contractSevice: GroupManagerContractService = inject(GroupManagerContractService);
   private toastr: ToastrService = inject(ToastrService);
+  private loader = inject(LoaderService);
 
   constructor() {
     const initialState: GroupListState = { groups: [], errorMessage: '' };
@@ -29,15 +31,16 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
   readonly errorMessage$: Observable<string> = this.select(state => state.errorMessage);
 
   readonly refreshAllGroups = this.effect<void>(trigger$ => trigger$.pipe(
+    tap(() => this.loader.show()),
     switchMap(() => {
       return this.contractSevice.myGroups$.pipe(
-        tap((e) => console.log('Fetching all groups', e)),
         tapResponse(
           (groups) => this.setGroups(groups),
-          (error: HttpErrorResponse) => this.handleError(error)
+          (error: HttpErrorResponse) => this.handleError(error),
         )
       )
-    })
+    }),
+    tap(() => this.loader.hide())
   ));
 
   readonly createGroup = this.effect<{ name: string, addresses: string[] }>(createGroup$ => createGroup$.pipe(
