@@ -152,9 +152,7 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
           (error: HttpErrorResponse) => this.handleError(error)
         )
       )
-    }
-    ),
-    tap(() => this.loader.hide())));
+    }),tap(() => this.loader.hide())));
 
   readonly loadExpenseEvents = this.effect<BigNumberish>(ids$ => ids$.pipe(
     tap(() => this.loader.show()),
@@ -167,7 +165,7 @@ export class GroupDetailsStore extends ComponentStore<GroupDetailsState> {
             });
           },
           (error: HttpErrorResponse) => this.handleError(error)
-        )
+        ),
       )
     }),
     tap(() => this.loader.hide())

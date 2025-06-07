@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { AddressLike, BigNumberish, ethers, Log } from 'ethers';
-import { catchError, combineLatest, EMPTY, filter, from, map, mergeMap, Observable, of, scan, switchMap, tap, toArray } from 'rxjs';
+import { catchError, combineLatest, EMPTY, filter, from, map, mergeMap, Observable, of, scan, startWith, switchMap, tap, toArray } from 'rxjs';
 import { DebtSettledEvent, ExpenseRegisteredEvent, GroupDetailsViewStruct, TrustGroupManager } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
 import { TrustGroupManager__factory } from '../../../../../../hardhat/typechain-types/factories/contracts/TrustGroupManager__factory';
 import { environment } from '../../../../../environments/environment';
@@ -177,23 +177,28 @@ export class GroupManagerContractService {
           8490300,
           'latest'
         )).pipe(
-          switchMap(events =>
-            from(events).pipe(
+          switchMap(events => {
+            if (events.length === 0) {
+              return of([]); 
+            }
+
+            return from(events).pipe(
               mergeMap(event =>
                 from(this.walletService.provider.getBlock(event.blockNumber)).pipe(
-                  catchError(this.blockNotFound(event)), // Handle case where block might not be found
+                  catchError(this.blockNotFound(event)),
                   map(block => ({
                     groupId: event.args[0],
                     from: event.args[1],
                     to: event.args[2],
                     amount: event.args[3],
                     timestamp: block?.timestamp || 0
-                  })),
+                  }))
                 )
               ),
               scan((acc: DebtSettledOutput[], group) => [...acc, group], [])
-            )
-          )
+            );
+          })
+
         )
       )
     );
@@ -207,11 +212,14 @@ export class GroupManagerContractService {
           8490300,
           'latest'
         )).pipe(
-          switchMap(events =>
-            from(events).pipe(
+          switchMap(events => {
+            if (events.length === 0) {
+              return of([]);
+            }
+            return from(events).pipe(
               mergeMap(event =>
                 from(this.walletService.provider.getBlock(event.blockNumber)).pipe(
-                  catchError(this.blockNotFound(event)), // Handle case where block might not be found
+                  catchError(this.blockNotFound(event)),
                   map(block => ({
                     groupId: event.args[0],
                     expenseId: event.args[1],
@@ -225,10 +233,11 @@ export class GroupManagerContractService {
                 )
               ),
               scan((acc: ExpenseRegisteredOutput[], group) => [...acc, group], [])
-            )
-          )
+            );
+          })
+
         )
-      )
+      ),
     );
   }
 
