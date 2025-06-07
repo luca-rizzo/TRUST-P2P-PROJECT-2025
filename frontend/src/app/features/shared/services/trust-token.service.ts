@@ -2,52 +2,69 @@ import { Injectable } from '@angular/core';
 import { TrustToken } from '../../../../../../hardhat/typechain-types/contracts/TrustToken';
 import { TrustToken__factory } from '../../../../../../hardhat/typechain-types/factories/contracts/TrustToken__factory';
 import { WalletService } from './wallet.service';
-import { TRUST_TOKEN_CONTRACT } from '../../../environments/deployed-contracts';
-import { GROUP_MANAGER_CONTRACT } from '../../../environments/deployed-contracts';
-import { from } from 'rxjs';
 
+import { combineLatest, filter, from, map, Observable, of, switchMap } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
 import { parseToBase18 } from '../utility.ts/to_base_converter';
-import { ContractRunner, ethers } from 'ethers';
+import { ethers } from 'ethers';
+
 @Injectable({
   providedIn: 'root'
 })
 export class TrustTokenService {
+  private trustTokenAddress = environment.trustContracts.trustTokenAddress;
+  private groupManagerAddress = environment.trustContracts.groupManagerAddress;
 
-  private contract: TrustToken;
+  constructor(private walletService: WalletService) { }
 
-  constructor(private walletService: WalletService) {
-    this.contract = TrustToken__factory.connect(
-      TRUST_TOKEN_CONTRACT.publicAddress,
-      this.walletService.wallet
+  /**
+   * Emits the connected contract once the wallet is available
+   */
+  private contract$ = this.walletService.wallet$.pipe(
+    filter(wallet => !!wallet),
+    switchMap(wallet => {
+      const contract = TrustToken__factory.connect(this.trustTokenAddress, wallet);
+      return of(contract);
+    })
+  );
+
+  TTBalance$ = combineLatest([this.contract$, this.walletService.address$]).pipe(
+    filter(([contract, address]) => !!address && !!contract),
+    switchMap(([contract, address]) => {
+      address = address as string; // Ensure address is a string
+      return contract.balanceOf(address);
+    })
+  );
+
+  allowance$ = combineLatest([this.contract$, this.walletService.address$]).pipe(
+    filter(([contract, address]) => !!address && !!contract),
+    switchMap(([contract, address]) => {
+      address = address as string; // Ensure address is a string
+      return contract.allowance(address, this.groupManagerAddress);
+    })
+  );
+
+  ethToTT(amount: number): Observable<ethers.ContractTransactionResponse> {
+    return this.contract$.pipe(
+      switchMap(contract => {
+        const value = parseToBase18(amount);
+        return from(contract.buyTokens({ value }));
+      })
     );
   }
 
-  ethToTT(amount: number) {
-    const value = parseToBase18(amount);
-    return from(this.contract.buyTokens({ value }));
+  getRate(): Observable<bigint> {
+    return this.contract$.pipe(
+      switchMap(contract => from(contract.rate()))
+    );
   }
 
-  getTTTokenBalance() {
-    return from(this.contract.balanceOf(this.walletService.wallet.address));
+  setAllowanceToGroupManager(amount: number): Observable<ethers.ContractTransactionResponse> {
+    return this.contract$.pipe(
+      switchMap(contract => {
+        const parsedAmount = parseToBase18(amount);
+        return from(contract.approve(this.groupManagerAddress, parsedAmount));
+      })
+    );
   }
-
-  getRate() {
-    return from(this.contract.rate());
-  }
-
-  allowanceToGroupManager() {
-    return from(this.contract.allowance(
-      this.walletService.wallet.address,
-      GROUP_MANAGER_CONTRACT.publicAddress
-    ));
-  }
-
-  setAllowanceToGroupManager(amount: number) {
-    const parsedAmount = parseToBase18(amount);
-    return from(this.contract.approve(
-      GROUP_MANAGER_CONTRACT.publicAddress,
-      parsedAmount
-    ));
-  }
-
 }

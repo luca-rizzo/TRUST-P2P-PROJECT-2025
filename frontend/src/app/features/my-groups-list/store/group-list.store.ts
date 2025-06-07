@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { ComponentStore } from '@ngrx/component-store';
 import { tapResponse } from '@ngrx/operators';
-import { from, Observable, switchMap } from 'rxjs';
+import { from, Observable, switchMap, tap } from 'rxjs';
 import { GroupManagerContractService, GroupMetadata } from '../../shared/services/group-manager-contract.service';
 import { ToastrService } from 'ngx-toastr';
 import { BigNumberish } from 'ethers';
@@ -30,7 +30,8 @@ export class GroupListServiceStore extends ComponentStore<GroupListState> {
 
   readonly refreshAllGroups = this.effect<void>(trigger$ => trigger$.pipe(
     switchMap(() => {
-      return this.contractSevice.getAllMyGroups().pipe(
+      return this.contractSevice.myGroups$.pipe(
+        tap((e) => console.log('Fetching all groups', e)),
         tapResponse(
           (groups) => this.setGroups(groups),
           (error: HttpErrorResponse) => this.handleError(error)

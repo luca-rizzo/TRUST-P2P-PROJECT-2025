@@ -1,0 +1,28 @@
+.wallet-warning {
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ffdddd;
+    border: 1px solid #cc0000;
+    color: #990000;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #ffaaaa;
+    z-index: 9999;
+    max-width: 90%;
+}
+
+.wallet-warning-box p {
+    margin: 0.5rem 0 0;
+}
+
+.wallet-warning-box .retry {
+    margin-top: 0.7rem;
+    background-color: #cc0000;
+    color: white;
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+}

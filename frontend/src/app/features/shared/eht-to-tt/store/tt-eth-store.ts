@@ -56,8 +56,8 @@ export class TTEthStore extends ComponentStore<CurrentAccountAmount> {
   readonly loadCurrentAccountAmount = this.effect<void>(trigger$ => trigger$.pipe(
     switchMap(() => {
       return combineLatest([
-        this.tokenSevice.getTTTokenBalance(),
-        this.walletSevice.getEthAmount()
+        this.tokenSevice.TTBalance$,
+        this.walletSevice.ethAmount$
       ]).pipe(
         tapResponse(
           ([tg, wei]) => this.patchState({
@@ -71,7 +71,7 @@ export class TTEthStore extends ComponentStore<CurrentAccountAmount> {
 
   readonly loadAllowanceToContractManager = this.effect<void>(trigger$ => trigger$.pipe(
     switchMap(() => {
-      return this.tokenSevice.allowanceToGroupManager().pipe(
+      return this.tokenSevice.allowance$.pipe(
         tapResponse(
           (allowance) => {
             this.patchState({ allowanceToContractManager: allowance });

@@ -2,4 +2,15 @@
   <app-header></app-header>
 
   <router-outlet></router-outlet>
+
+  <div class="wallet-warning" *ngIf="(walletNotInitialized$ | async)">
+    <div class="wallet-warning-box">
+      <strong>⚠️ Wallet not connected</strong>
+      <p>Please connect and authorize MetaMask to continue.</p>
+      <button class="retry" (click)="retryMetaMask()">Try Again</button>
+    </div>
+  </div>
+
+  <app-loader></app-loader>
+
 </div>

@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
-import { filter, from, fromEventPattern, map, merge, mergeMap, Observable, switchMap, tap, toArray } from 'rxjs';
+import { AddressLike, BigNumberish, ethers, Log } from 'ethers';
+import { catchError, combineLatest, EMPTY, filter, from, map, mergeMap, Observable, of, scan, switchMap, tap, toArray } from 'rxjs';
 import { DebtSettledEvent, ExpenseRegisteredEvent, GroupDetailsViewStruct, TrustGroupManager } from '../../../../../../hardhat/typechain-types/contracts/TrustGroupManager';
 import { TrustGroupManager__factory } from '../../../../../../hardhat/typechain-types/factories/contracts/TrustGroupManager__factory';
-import { GROUP_MANAGER_CONTRACT } from '../../../environments/deployed-contracts';
-import { WalletService } from './wallet.service';
+import { environment } from '../../../../../environments/environment';
 import { CreateExpense, SplitMethod, SplitMethodIndex } from '../../group-details/models/CreateExpense';
-import { AddressLike, BaseContract, BigNumberish, ethers, Log } from 'ethers';
-import { parseToBase18 } from '../utility.ts/to_base_converter';
 import { createObservableFromEvent } from '../utility.ts/observable_from_event';
+import { parseToBase18 } from '../utility.ts/to_base_converter';
+import { WalletService } from './wallet.service';
+import { TypedEventLog, TypedContractEvent } from '../../../../../../hardhat/typechain-types/common';
 
 export interface GroupMetadata {
   groupId: number;
@@ -27,189 +28,221 @@ export type ExpenseRegisteredOutput = ExpenseRegisteredEvent.OutputObject & {
   providedIn: 'root'
 })
 export class GroupManagerContractService {
+  private groupManagerAddress = environment.trustContracts.groupManagerAddress;
 
+  constructor(private walletService: WalletService) { }
 
-  private contract: TrustGroupManager;
-
-  mySettlementEvent$ = this.walletService.address$.pipe(
-    switchMap((address: string) => {
-      return createObservableFromEvent<DebtSettledEvent.OutputObject>(
-        'DebtSettled',
-        this.contract,
-        ['groupId', 'from', 'to', 'amount'],
-        (e: DebtSettledEvent.OutputObject) => e.from === address || e.to === address
-      )
+  private contract$: Observable<TrustGroupManager> = this.walletService.wallet$.pipe(
+    filter(wallet => !!wallet),
+    switchMap(wallet => {
+      return of(TrustGroupManager__factory.connect(this.groupManagerAddress, wallet));
     })
   );
 
-  constructor(private walletService: WalletService) {
-    this.contract = TrustGroupManager__factory.connect(
-      GROUP_MANAGER_CONTRACT.publicAddress,
-      this.walletService.wallet
-    );
-
-  }
-
-  public getAllMyGroups() {
-    return this.walletService.address$.pipe(
-      switchMap((address: string) =>
-        from(
-          this.contract.queryFilter(
-            this.contract.filters.UserApproved(undefined, address),
-            0,
-            'latest'
-          )
-        ).pipe(
-          mergeMap((events: Log[]) =>
-            from(events).pipe(
-              mergeMap((event: any) => 
-                this.getGroupDetails(event.args[0]).pipe(
-                  map(groupDetails => ({
-                    ...groupDetails,
-                    // puoi aggiungere altri campi se vuoi
-                  }))
-                )
-              ),
-              toArray()
-            )
-          )
-        )
+  public mySettlementEvent$ = combineLatest([
+    this.contract$,
+    this.walletService.address$
+  ]).pipe(
+    switchMap(([contract, address]) =>
+      createObservableFromEvent<DebtSettledEvent.OutputObject>(
+        'DebtSettled',
+        contract,
+        ['groupId', 'from', 'to', 'amount'],
+        (e) => e.from === address || e.to === address
       )
-    );
+    )
+  );
 
-  }
+  public myGroups$ = combineLatest([this.contract$, this.walletService.address$]).pipe(
+    filter(([contract, address]) => !!address && !!contract),
+    switchMap(([contract, address]) => {
+      console.log('Fetching groups for address:', address);
+      return from(
+        contract.queryFilter(
+          contract.filters.UserApproved(undefined, address ?? undefined),
+          8490100,
+          'latest'
+        )
+      ).pipe(
+        switchMap(events =>
+          from(events).pipe(
+            mergeMap(event => this.getGroupDetails(event.args[0]).pipe(
+              catchError(err => {
+                console.error('Error fetching group details:', err);
+                return EMPTY;
+              })
+            )),
+          )
+        ),
+        scan((acc: GroupDetailsViewStruct[], group) => [...acc, group], [])
+      )
+    }
+    )
+  );
+
 
   public requestToJoinGroup(id: BigNumberish) {
-    return from(this.contract.requestToJoin(id));
+    return this.contract$.pipe(
+      switchMap(contract => from(contract.requestToJoin(id)))
+    );
   }
 
   public getLiveGroupSettlementEvents(id: BigNumberish): Observable<DebtSettledOutput> {
-    console.log("Retrieving settlement events for group ID:", id);
-    return createObservableFromEvent<DebtSettledOutput>(
-      'DebtSettled',
-      this.contract,
-      ['groupId', 'from', 'to', 'amount'],
-      (e: DebtSettledOutput) => e.groupId == id.valueOf() as bigint
-    )
+    return this.contract$.pipe(
+      switchMap(contract =>
+        createObservableFromEvent<DebtSettledOutput>(
+          'DebtSettled',
+          contract,
+          ['groupId', 'from', 'to', 'amount'],
+          (e) => e.groupId == id.valueOf() as bigint
+        )
+      )
+    );
   }
 
   public getLiveGroupExpenseEvents(id: BigNumberish): Observable<ExpenseRegisteredOutput> {
-    console.log("Retrieving expense events for group ID:", id);
-    return createObservableFromEvent<ExpenseRegisteredOutput>(
-      'ExpenseRegistered',
-      this.contract,
-      ['groupId', 'expenseId', 'payer', 'amount', 'description', 'splitWith', 'amountForEach'],
-      (e: ExpenseRegisteredOutput) => e.groupId == id.valueOf() as bigint
-    )
+    return this.contract$.pipe(
+      switchMap(contract =>
+        createObservableFromEvent<ExpenseRegisteredOutput>(
+          'ExpenseRegistered',
+          contract,
+          ['groupId', 'expenseId', 'payer', 'amount', 'description', 'splitWith', 'amountForEach'],
+          (e) => e.groupId == id.valueOf() as bigint
+        )
+      )
+    );
   }
 
-  public getGroupDetails(id: BigNumberish) {
-    return from(this.contract.retrieveGroup(id)).pipe(
-      //necessario per non avere proxy e poter poi ordinare array
-      map((groupRaw: GroupDetailsViewStruct): GroupDetailsViewStruct => {
-        return {
-          id: Number(groupRaw.id),
-          name: groupRaw.name,
-          members: Array.from(groupRaw.members),
-          requestsToJoin: Array.from(groupRaw.requestsToJoin),
-          balances: Array.from(groupRaw.balances).map((b: any) => ({
-            member: b.member,
-            amount: b.amount
-          }))
-        };
-      })
+  public getGroupDetails(id: BigNumberish): Observable<GroupDetailsViewStruct> {
+    return this.contract$.pipe(
+      switchMap(contract =>
+        from(contract.retrieveGroup(id))
+      )
     );
   }
 
   public getGroupDebts(id: BigNumberish) {
-    return from(this.contract.allGroupDebts(id));
+    return this.contract$.pipe(
+      switchMap(contract => from(contract.allGroupDebts(id)))
+    );
   }
 
   public createGroup(name: string, addresses: string[]) {
-    return from(this.contract.createGroup(name, addresses));
+    return this.contract$.pipe(
+      switchMap(contract => from(contract.createGroup(name, addresses)))
+    );
   }
+
   public simplifyDebts(id: BigNumberish) {
-    return from(this.contract.simplifyDebt(id));
+    return this.contract$.pipe(
+      switchMap(contract => from(contract.simplifyDebt(id)))
+    );
   }
 
   public createExpense(groupId: BigNumberish, createExpense: CreateExpense) {
     const parsedAmount = ethers.parseUnits(createExpense.amount.toString(), 18);
-    const parsedValues = createExpense.splitMethod === SplitMethod.EXACT ?
-      createExpense.values.map(parseToBase18) : createExpense.values;
-    return from(this.contract.registerExpenses(
-      groupId,
-      createExpense.description,
-      parsedAmount,
-      createExpense.splitWith,
-      SplitMethodIndex[createExpense.splitMethod],
-      parsedValues
-    ));
+    const parsedValues =
+      createExpense.splitMethod === SplitMethod.EXACT
+        ? createExpense.values.map(parseToBase18)
+        : createExpense.values;
+
+    return this.contract$.pipe(
+      switchMap(contract =>
+        from(
+          contract.registerExpenses(
+            groupId,
+            createExpense.description,
+            parsedAmount,
+            createExpense.splitWith,
+            SplitMethodIndex[createExpense.splitMethod],
+            parsedValues
+          )
+        )
+      )
+    );
   }
 
   public settleDebt(groupId: BigNumberish, amount: number, address: string) {
     const parsedAmount = parseToBase18(amount);
-    return from(this.contract.settleDebt(groupId, parsedAmount, address));
+    return this.contract$.pipe(
+      switchMap(contract => from(contract.settleDebt(groupId, parsedAmount, address)))
+    );
   }
 
   public getSettlementEvents(groupId: BigNumberish): Observable<DebtSettledOutput[]> {
-    return from(
-      this.contract.queryFilter(
-        this.contract.filters.DebtSettled(groupId, undefined, undefined),
-        0,
-        'latest'
-      )
-    ).pipe(
-      mergeMap(events =>
-        from(events).pipe(
-          mergeMap(event =>
-            from(this.walletService.provider.getBlock(event.blockNumber)).pipe(
-              map(block => ({
-                groupId: event.args[0],
-                from: event.args[1],
-                to: event.args[2],
-                amount: event.args[3],
-                timestamp: block?.timestamp || 0
-              }))
+    return this.contract$.pipe(
+      switchMap(contract =>
+        from(contract.queryFilter(
+          contract.filters.DebtSettled(groupId, undefined, undefined),
+          8490300,
+          'latest'
+        )).pipe(
+          switchMap(events =>
+            from(events).pipe(
+              mergeMap(event =>
+                from(this.walletService.provider.getBlock(event.blockNumber)).pipe(
+                  catchError(this.blockNotFound(event)), // Handle case where block might not be found
+                  map(block => ({
+                    groupId: event.args[0],
+                    from: event.args[1],
+                    to: event.args[2],
+                    amount: event.args[3],
+                    timestamp: block?.timestamp || 0
+                  })),
+                )
+              ),
+              scan((acc: DebtSettledOutput[], group) => [...acc, group], [])
             )
-          ),
-          toArray()
+          )
         )
       )
     );
   }
 
   public getExpenseEvents(groupId: BigNumberish): Observable<ExpenseRegisteredOutput[]> {
-    return from(
-      this.contract.queryFilter(
-        this.contract.filters.ExpenseRegistered(groupId, undefined, undefined),
-        0,
-        'latest'
-      )
-    ).pipe(
-      mergeMap(events =>
-        from(events).pipe(
-          mergeMap(event =>
-            from(this.walletService.provider.getBlock(event.blockNumber)).pipe(
-              map(block => ({
-                groupId: event.args[0],
-                expenseId: event.args[1],
-                payer: event.args[2],
-                amount: event.args[3],
-                description: event.args[4],
-                splitWith: event.args[5],
-                amountForEach: event.args[6],
-                timestamp: block?.timestamp || 0
-              }))
+    return this.contract$.pipe(
+      switchMap(contract =>
+        from(contract.queryFilter(
+          contract.filters.ExpenseRegistered(groupId, undefined, undefined),
+          8490300,
+          'latest'
+        )).pipe(
+          switchMap(events =>
+            from(events).pipe(
+              mergeMap(event =>
+                from(this.walletService.provider.getBlock(event.blockNumber)).pipe(
+                  catchError(this.blockNotFound(event)), // Handle case where block might not be found
+                  map(block => ({
+                    groupId: event.args[0],
+                    expenseId: event.args[1],
+                    payer: event.args[2],
+                    amount: event.args[3],
+                    description: event.args[4],
+                    splitWith: event.args[5],
+                    amountForEach: event.args[6],
+                    timestamp: block?.timestamp || 0
+                  }))
+                )
+              ),
+              scan((acc: ExpenseRegisteredOutput[], group) => [...acc, group], [])
             )
-          ),
-          toArray()
+          )
         )
       )
     );
   }
 
-  approveJoinRequest(id: BigNumberish, newMember: AddressLike) {
-    return from(this.contract.approveAddress(id, newMember));
+  private blockNotFound(event: any): (err: any, caught: Observable<ethers.Block | null>) => Observable<null> {
+    return () => {
+      console.error('Block not found for event:', event);
+      return of(null);
+    };
   }
 
+  public approveJoinRequest(id: BigNumberish, newMember: AddressLike) {
+    return this.contract$.pipe(
+      switchMap(contract => from(contract.approveAddress(id, newMember)))
+    );
+  }
 }
+
