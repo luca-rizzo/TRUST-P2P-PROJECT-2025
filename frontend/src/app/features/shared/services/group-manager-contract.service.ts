@@ -56,7 +56,6 @@ export class GroupManagerContractService {
   public myGroups$ = combineLatest([this.contract$, this.walletService.address$]).pipe(
     filter(([contract, address]) => !!address && !!contract),
     switchMap(([contract, address]) => {
-      console.log('Fetching groups for address:', address);
       return from(
         contract.queryFilter(
           contract.filters.UserApproved(undefined, address ?? undefined),
@@ -64,21 +63,22 @@ export class GroupManagerContractService {
           'latest'
         )
       ).pipe(
-        switchMap(events =>
-          from(events).pipe(
+        switchMap(events => {
+          if (events.length === 0) {
+            return of([]);
+          }
+          return from(events).pipe(
             mergeMap(event => this.getGroupDetails(event.args[0]).pipe(
               catchError(err => {
                 console.error('Error fetching group details:', err);
                 return EMPTY;
               })
             )),
+            scan((acc: GroupDetailsViewStruct[], group) => [...acc, group], [])
           )
-        ),
-        scan((acc: GroupDetailsViewStruct[], group) => [...acc, group], [])
-      )
-    }
-    )
-  );
+        }))
+      })
+    );
 
 
   public requestToJoinGroup(id: BigNumberish) {
@@ -179,7 +179,7 @@ export class GroupManagerContractService {
         )).pipe(
           switchMap(events => {
             if (events.length === 0) {
-              return of([]); 
+              return of([]);
             }
 
             return from(events).pipe(
