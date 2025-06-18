@@ -59,7 +59,7 @@ export class GroupManagerContractService {
       return from(
         contract.queryFilter(
           contract.filters.UserApproved(undefined, address ?? undefined),
-          8490100,
+          environment.trustContracts.deployedBlock,
           'latest'
         )
       ).pipe(
@@ -174,7 +174,7 @@ export class GroupManagerContractService {
       switchMap(contract =>
         from(contract.queryFilter(
           contract.filters.DebtSettled(groupId, undefined, undefined),
-          8490300,
+          environment.trustContracts.deployedBlock,
           'latest'
         )).pipe(
           switchMap(events => {
@@ -209,7 +209,7 @@ export class GroupManagerContractService {
       switchMap(contract =>
         from(contract.queryFilter(
           contract.filters.ExpenseRegistered(groupId, undefined, undefined),
-          8490300,
+          environment.trustContracts.deployedBlock,
           'latest'
         )).pipe(
           switchMap(events => {

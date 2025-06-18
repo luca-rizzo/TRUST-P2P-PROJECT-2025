@@ -6,6 +6,7 @@ export const environment = {
   },
   trustContracts: {
     trustTokenAddress: '0x29008fB98A5b2e629596b20dcAC7Fb896B99862f',
-    groupManagerAddress: '0xcA2C17a3d57ef90EAb9f0dF3c53A5c298D4C320A'
+    groupManagerAddress: '0xcA2C17a3d57ef90EAb9f0dF3c53A5c298D4C320A',
+    deployedBlock: 8490100
   }
 };
