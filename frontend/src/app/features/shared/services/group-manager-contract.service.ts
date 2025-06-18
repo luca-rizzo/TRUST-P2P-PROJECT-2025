@@ -43,12 +43,13 @@ export class GroupManagerContractService {
     this.contract$,
     this.walletService.address$
   ]).pipe(
+    filter(([contract, address]) => !!address && !!contract),
     switchMap(([contract, address]) =>
       createObservableFromEvent<DebtSettledEvent.OutputObject>(
         'DebtSettled',
         contract,
         ['groupId', 'from', 'to', 'amount'],
-        (e) => e.from === address || e.to === address
+        (e) => e.from == address || e.to == address
       )
     )
   );
